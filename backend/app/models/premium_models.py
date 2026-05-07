@@ -9,12 +9,9 @@ class Lesson(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     youtube_url = db.Column(db.String(500), nullable=False)
-    duration = db.Column(db.Integer)  # In minutes
+    duration = db.Column(db.String(50)) 
     order_index = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    # Relationships
-    course = db.relationship('Course', backref=db.backref('lessons', lazy=True, order_by="Lesson.order_index"))
 
     def to_dict(self):
         return {
@@ -32,6 +29,7 @@ class UserLessonProgress(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     lesson_id = db.Column(db.Integer, db.ForeignKey('lessons.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
     completed = db.Column(db.Boolean, default=False)
     watched_at = db.Column(db.DateTime, default=datetime.utcnow)
 

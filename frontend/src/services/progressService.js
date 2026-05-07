@@ -9,6 +9,11 @@ const progressService = {
     markAsCompleted: async (courseId) => {
         const response = await api.post('/progress/complete', { course_id: courseId });
         return response.data;
+    },
+
+    trackLessonProgress: async (courseId, lessonId) => {
+        const response = await api.post('/lessons/progress', { course_id: courseId, lesson_id: lessonId });
+        return response.data;
     }
 };
 

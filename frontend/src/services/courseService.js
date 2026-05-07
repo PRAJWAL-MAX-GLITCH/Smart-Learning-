@@ -26,6 +26,27 @@ const courseService = {
     deleteCourse: async (id) => {
         const response = await api.delete(`/courses/${id}`);
         return response.data;
+    },
+
+    // Lesson Methods
+    getLessons: async (courseId) => {
+        const response = await api.get(`/lessons/course/${courseId}`);
+        return response.data;
+    },
+
+    addLesson: async (lessonData) => {
+        const response = await api.post('/lessons', lessonData);
+        return response.data;
+    },
+
+    updateLesson: async (id, lessonData) => {
+        const response = await api.put(`/lessons/${id}`, lessonData);
+        return response.data;
+    },
+
+    deleteLesson: async (id) => {
+        const response = await api.delete(`/lessons/${id}`);
+        return response.data;
     }
 };
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
+import courseService from '../../services/courseService';
 import { Plus, Edit2, Trash2, ArrowLeft, Loader2, Save, X, Video, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
-import axios from 'axios';
 
 const LessonManagement = () => {
     const { courseId } = useParams();
@@ -17,7 +17,7 @@ const LessonManagement = () => {
         title: '',
         description: '',
         youtube_url: '',
-        duration: 10,
+        duration: '10 Mins',
         order_index: 0
     });
 
@@ -27,11 +27,8 @@ const LessonManagement = () => {
 
     const fetchLessons = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`http://127.0.0.1:5000/api/courses/${courseId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setLessons(res.data.lessons || []);
+            const data = await courseService.getLessons(courseId);
+            setLessons(data || []);
         } catch (err) {
             toast.error("Failed to load lessons");
         } finally {
@@ -46,7 +43,7 @@ const LessonManagement = () => {
                 title: lesson.title,
                 description: lesson.description,
                 youtube_url: lesson.youtube_url,
-                duration: lesson.duration,
+                duration: lesson.duration || '10 Mins',
                 order_index: lesson.order_index
             });
         } else {
@@ -55,7 +52,7 @@ const LessonManagement = () => {
                 title: '',
                 description: '',
                 youtube_url: '',
-                duration: 10,
+                duration: '10 Mins',
                 order_index: lessons.length
             });
         }
@@ -66,20 +63,17 @@ const LessonManagement = () => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const token = localStorage.getItem('token');
-            const headers = { Authorization: `Bearer ${token}` };
-            
             if (editingLesson) {
-                await axios.put(`http://127.0.0.1:5000/api/admin/lessons/${editingLesson.id}`, formData, { headers });
+                await courseService.updateLesson(editingLesson.id, formData);
                 toast.success("Lesson updated");
             } else {
-                await axios.post(`http://127.0.0.1:5000/api/admin/lessons`, { ...formData, course_id: parseInt(courseId) }, { headers });
+                await courseService.addLesson({ ...formData, course_id: parseInt(courseId) });
                 toast.success("Lesson added");
             }
             setIsModalOpen(false);
             fetchLessons();
         } catch (err) {
-            toast.error("Operation failed");
+            toast.error(err.response?.data?.message || "Operation failed");
         } finally {
             setIsSubmitting(false);
         }
@@ -88,10 +82,7 @@ const LessonManagement = () => {
     const handleDelete = async (id) => {
         if (!window.confirm("Delete this lesson?")) return;
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`http://127.0.0.1:5000/api/admin/lessons/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await courseService.deleteLesson(id);
             toast.success("Lesson removed");
             fetchLessons();
         } catch (err) {
@@ -133,11 +124,13 @@ const LessonManagement = () => {
                         <div key={lesson.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:border-blue-200 transition-all">
                             <div className="text-gray-300 group-hover:text-blue-600 cursor-move"><GripVertical size={20} /></div>
                             <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center font-black text-gray-400">{idx + 1}</div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-gray-900">{lesson.title}</h3>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-gray-900 truncate">{lesson.title}</h3>
                                 <div className="flex items-center gap-4 mt-1">
-                                    <span className="text-xs text-gray-400 flex items-center gap-1 font-bold uppercase tracking-widest"><Video size={14} /> Video</span>
-                                    <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{lesson.duration} Mins</span>
+                                    <span className="text-xs text-gray-400 flex items-center gap-1 font-bold uppercase tracking-widest truncate max-w-[200px]">
+                                        <Video size={14} /> {lesson.youtube_url}
+                                    </span>
+                                    <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{lesson.duration}</span>
                                 </div>
                             </div>
                             <div className="flex gap-2">
@@ -152,7 +145,7 @@ const LessonManagement = () => {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-3xl w-full max-w-xl p-8 shadow-2xl">
+                    <div className="bg-white rounded-3xl w-full max-w-xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold">{editingLesson ? 'Edit Lesson' : 'Add New Lesson'}</h2>
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400"><X /></button>
@@ -161,44 +154,44 @@ const LessonManagement = () => {
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Lesson Title</label>
                                 <input 
-                                    type="text" required className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200" 
+                                    type="text" required className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200 bg-gray-50" 
                                     value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
                                 />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">YouTube URL</label>
                                 <input 
-                                    type="text" required className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200" 
+                                    type="text" required className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200 bg-gray-50" 
                                     value={formData.youtube_url} onChange={e => setFormData({...formData, youtube_url: e.target.value})}
                                     placeholder="https://www.youtube.com/watch?v=..."
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Duration (Mins)</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Duration (e.g. 15 Mins)</label>
                                     <input 
-                                        type="number" className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200" 
+                                        type="text" className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200 bg-gray-50" 
                                         value={formData.duration} onChange={e => setFormData({...formData, duration: e.target.value})}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Order Index</label>
                                     <input 
-                                        type="number" className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200" 
-                                        value={formData.order_index} onChange={e => setFormData({...formData, order_index: e.target.value})}
+                                        type="number" className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200 bg-gray-50" 
+                                        value={formData.order_index} onChange={e => setFormData({...formData, order_index: parseInt(e.target.value)})}
                                     />
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Short Description</label>
                                 <textarea 
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200 min-h-[100px]" 
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-100 outline-none focus:border-blue-200 bg-gray-50 min-h-[100px]" 
                                     value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}
                                 ></textarea>
                             </div>
                             <button 
                                 type="submit" disabled={isSubmitting}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-lg"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all"
                             >
                                 {isSubmitting ? <Loader2 className="animate-spin" /> : <><Save size={20} /> Save Lesson</>}
                             </button>

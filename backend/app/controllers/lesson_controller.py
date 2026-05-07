@@ -39,3 +39,37 @@ class LessonController:
         db.session.delete(lesson)
         db.session.commit()
         return jsonify({"message": "Lesson deleted successfully"}), 200
+
+    @staticmethod
+    def get_lessons_by_course(course_id):
+        lessons = Lesson.query.filter_by(course_id=course_id).order_by(Lesson.order_index.asc()).all()
+        return jsonify([l.to_dict() for l in lessons]), 200
+
+    @staticmethod
+    def track_progress():
+        from flask_jwt_extended import get_jwt_identity
+        from app.models.premium_models import UserLessonProgress
+        
+        data = request.get_json()
+        user_id = get_jwt_identity()
+        lesson_id = data['lesson_id']
+        course_id = data['course_id']
+        
+        progress = UserLessonProgress.query.filter_by(
+            user_id=user_id, 
+            lesson_id=lesson_id
+        ).first()
+        
+        if not progress:
+            progress = UserLessonProgress(
+                user_id=user_id, 
+                lesson_id=lesson_id,
+                course_id=course_id,
+                completed=True
+            )
+            db.session.add(progress)
+        else:
+            progress.completed = True
+            
+        db.session.commit()
+        return jsonify({"message": "Progress tracked"}), 200

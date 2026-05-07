@@ -33,11 +33,47 @@ def create_app(config_name="default"):
     # Register Error Handlers
     register_error_handlers(app)
 
-    # Create tables
+    # Create tables + auto-migrate missing columns
     with app.app_context():
         db.create_all()
+        auto_migrate_db(app)
 
     return app
+
+
+def auto_migrate_db(app):
+    """Safely add missing columns to existing database tables without dropping data."""
+    from sqlalchemy import text
+    from app.extensions import db
+
+    with app.app_context():
+        migrations = {
+            "users": [
+                ("bio", "TEXT"),
+                ("profile_image", "TEXT"),
+                ("streak", "INTEGER DEFAULT 0"),
+                ("last_active", "TIMESTAMP"),
+            ],
+            "user_lesson_progress": [
+                ("course_id", "INTEGER"),
+            ],
+            "courses": [
+                ("duration", "TEXT"),
+                ("total_lessons", "INTEGER DEFAULT 1"),
+                ("difficulty_level", "TEXT DEFAULT 'Intermediate'"),
+                ("youtube_url", "TEXT"),
+            ],
+        }
+        for table, columns in migrations.items():
+            for col_name, col_type in columns:
+                try:
+                    db.session.execute(
+                        text(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}")
+                    )
+                    db.session.commit()
+                    app.logger.info(f"Migration: Added '{col_name}' to {table}.")
+                except Exception:
+                    db.session.rollback()  # Column already exists — safe to ignore
 
 
 def register_blueprints(app):

@@ -22,3 +22,13 @@ def update_lesson(lesson_id):
 @admin_required
 def delete_lesson(lesson_id):
     return LessonController.delete_lesson(lesson_id)
+
+@lesson_bp.route('/course/<int:course_id>', methods=['GET'])
+@jwt_required()
+def get_lessons(course_id):
+    return LessonController.get_lessons_by_course(course_id)
+
+@lesson_bp.route('/progress', methods=['POST'])
+@jwt_required()
+def track_progress():
+    return LessonController.track_progress()

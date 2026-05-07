@@ -11,7 +11,7 @@ const CourseManagement = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCourse, setEditingCourse] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [formData, setFormData] = useState({ title: '', description: '', category: '', youtube_url: '' });
+    const [formData, setFormData] = useState({ title: '', description: '', category: '', youtube_url: '', duration: '', total_lessons: '', difficulty_level: 'Beginner' });
 
     useEffect(() => {
         fetchCourses();
@@ -31,10 +31,18 @@ const CourseManagement = () => {
     const handleOpenModal = (course = null) => {
         if (course) {
             setEditingCourse(course);
-            setFormData({ title: course.title, description: course.description, category: course.category, youtube_url: course.youtube_url || '' });
+            setFormData({ 
+                title: course.title, 
+                description: course.description, 
+                category: course.category, 
+                youtube_url: course.youtube_url || '',
+                duration: course.duration || '',
+                total_lessons: course.total_lessons || '',
+                difficulty_level: course.difficulty_level || 'Beginner'
+            });
         } else {
             setEditingCourse(null);
-            setFormData({ title: '', description: '', category: '', youtube_url: '' });
+            setFormData({ title: '', description: '', category: '', youtube_url: '', duration: '', total_lessons: '', difficulty_level: 'Beginner' });
         }
         setIsModalOpen(true);
     };
@@ -182,23 +190,43 @@ const CourseManagement = () => {
                                 ></textarea>
                             </div>
                             <div>
-                                <div className="flex justify-between items-end mb-2">
-                                    <label className="block text-sm font-bold text-gray-700">Course Video Link (YouTube)</label>
-                                    {formData.youtube_url && (
-                                        <button
-                                            type="button"
-                                            onClick={() => window.open(formData.youtube_url, '_blank')}
-                                            className="text-xs font-bold text-blue-600 hover:text-blue-800"
-                                        >
-                                            Preview Video
-                                        </button>
-                                    )}
-                                </div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Course Video Link (YouTube)</label>
                                 <input
                                     type="url" className="input-field" value={formData.youtube_url}
                                     onChange={e => setFormData({ ...formData, youtube_url: e.target.value })}
                                     placeholder="https://www.youtube.com/watch?v=..."
                                 />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Duration</label>
+                                    <input
+                                        type="text" className="input-field !py-2" value={formData.duration}
+                                        onChange={e => setFormData({ ...formData, duration: e.target.value })}
+                                        placeholder="4.5 Hours"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Lessons</label>
+                                    <input
+                                        type="number" className="input-field !py-2" value={formData.total_lessons}
+                                        onChange={e => setFormData({ ...formData, total_lessons: e.target.value })}
+                                        placeholder="12"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Difficulty</label>
+                                    <select 
+                                        className="input-field !py-2 appearance-none" 
+                                        value={formData.difficulty_level}
+                                        onChange={e => setFormData({ ...formData, difficulty_level: e.target.value })}
+                                    >
+                                        <option value="Beginner">Beginner</option>
+                                        <option value="Intermediate">Intermediate</option>
+                                        <option value="Advanced">Advanced</option>
+                                    </select>
+                                </div>
                             </div>
                             <div className="flex space-x-3 pt-4">
                                 <button

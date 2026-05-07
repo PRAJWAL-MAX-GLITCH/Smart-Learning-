@@ -30,6 +30,9 @@ class CourseService:
             description=data.get("description"),
             category=data.get("category"),
             youtube_url=data.get("youtube_url"),
+            duration=data.get("duration"),
+            total_lessons=data.get("total_lessons"),
+            difficulty_level=data.get("difficulty_level"),
             created_by=user_id
         )
         db.session.add(course)
@@ -39,7 +42,7 @@ class CourseService:
 
     @staticmethod
     def update_course(course, data):
-        for field in ["title", "description", "category", "youtube_url"]:
+        for field in ["title", "description", "category", "youtube_url", "duration", "total_lessons", "difficulty_level"]:
             if field in data:
                 setattr(course, field, data[field])
         db.session.commit()

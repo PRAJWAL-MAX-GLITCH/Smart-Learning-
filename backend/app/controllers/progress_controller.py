@@ -7,15 +7,28 @@ from datetime import datetime
 class ProgressController:
     @staticmethod
     def get_progress(course_id):
+        from app.models.premium_models import UserLessonProgress
         user_id = get_jwt_identity()
+        
+        # Course level progress (for legacy support or quick check)
         progress = UserCourseProgress.query.filter_by(
             user_id=user_id, 
             course_id=course_id
         ).first()
 
+        # Detailed lesson progress
+        lesson_progress = UserLessonProgress.query.filter_by(
+            user_id=user_id,
+            course_id=course_id,
+            completed=True
+        ).all()
+        
+        completed_lesson_ids = [lp.lesson_id for lp in lesson_progress]
+
         return jsonify({
             "completed": progress.completed if progress else False,
-            "completed_at": progress.completed_at if progress else None
+            "completed_at": progress.completed_at if progress else None,
+            "completed_lesson_ids": completed_lesson_ids
         }), 200
 
     @staticmethod

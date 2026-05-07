@@ -18,6 +18,9 @@ class CourseSchema(Schema):
     description = fields.Str()
     category = fields.Str()
     youtube_url = fields.Str(allow_none=True, validate=validate.URL(schemes={'http', 'https'}))
+    duration = fields.Str()
+    total_lessons = fields.Int()
+    difficulty_level = fields.Str()
     created_by = fields.Int(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
 

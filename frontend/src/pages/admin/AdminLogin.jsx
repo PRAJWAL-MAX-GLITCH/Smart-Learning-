@@ -1,32 +1,36 @@
 import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import authService from '../../services/authService';
 import { ShieldCheck, Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const AdminLogin = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { login, user } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
 
-    // If already logged in as admin, redirect to admin dashboard
+    // If already logged in as admin, redirect
     if (user && user.role === 'admin') return <Navigate to="/admin/dashboard" />;
+    // If a student is somehow logged in, show the form (they'll get 403 from backend)
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const data = await login(formData.email, formData.password);
-            if (data.user.role !== 'admin') {
-                toast.error("Unauthorized! You do not have admin access.");
-                // We logout or just don't navigate
-                return;
-            }
+            // Calls /api/auth/admin-login — backend validates role and returns 403 for non-admins
+            await authService.adminLogin(formData.email, formData.password);
             toast.success('Welcome back, Admin!');
-            navigate('/admin/dashboard');
+            // Use href so AuthContext re-initializes from localStorage
+            window.location.href = '/admin/dashboard';
         } catch (err) {
-            toast.error(err.response?.data?.error || 'Login failed. Please check your credentials.');
+            const status = err.response?.status;
+            if (status === 403) {
+                toast.error('Access Denied. Admin accounts only.');
+            } else {
+                toast.error(err.response?.data?.error || 'Login failed. Check credentials.');
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -80,11 +84,7 @@ const AdminLogin = () => {
                             disabled={isSubmitting}
                             className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white py-4 rounded-2xl font-black text-lg transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-3 active:scale-[0.98]"
                         >
-                            {isSubmitting ? (
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                            ) : (
-                                "Enter Dashboard"
-                            )}
+                            {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : "Enter Dashboard"}
                         </button>
                     </form>
                 </div>
