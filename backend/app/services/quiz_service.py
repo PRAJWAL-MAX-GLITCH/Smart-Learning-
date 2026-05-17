@@ -27,16 +27,27 @@ class QuizService:
             return None, "No valid questions found"
 
         correct_count = 0
+        topic_performance = {} # Track correct/total per topic in this quiz
+        
         for q in questions:
-            if user_answers.get(str(q.id), "").upper() == q.correct_answer.upper():
+            is_correct = user_answers.get(str(q.id), "").upper() == q.correct_answer.upper()
+            
+            # Initialize topic in performance tracker
+            if q.topic not in topic_performance:
+                topic_performance[q.topic] = {"correct": 0, "total": 0}
+            
+            topic_performance[q.topic]["total"] += 1
+            if is_correct:
                 correct_count += 1
+                topic_performance[q.topic]["correct"] += 1
 
         total = len(questions)
         score_pct = round((correct_count / total) * 100, 2)
         return {
             "score": score_pct,
             "correct": correct_count,
-            "total": total
+            "total": total,
+            "topic_performance": topic_performance
         }, None
 
     @staticmethod
@@ -44,6 +55,7 @@ class QuizService:
         score = evaluation["score"]
         feedback = generate_feedback(score)
 
+        import json
         result = Result(
             user_id=user_id,
             course_id=course_id,
@@ -51,12 +63,36 @@ class QuizService:
             total_questions=evaluation["total"],
             correct_answers=evaluation["correct"],
             feedback=feedback,
-            time_taken=time_taken
+            time_taken=time_taken,
+            topic_performance=json.dumps(evaluation.get("topic_performance", {}))
         )
 
         db.session.add(result)
+        
+        # --- Update Topic Stats ---
+        from app.models.user_topic_stats import UserTopicStats
+        topic_perf = evaluation.get("topic_performance", {})
+        for topic, stats in topic_perf.items():
+            topic_record = UserTopicStats.query.filter_by(user_id=user_id, topic=topic).first()
+            if not topic_record:
+                topic_record = UserTopicStats(
+                    user_id=user_id,
+                    topic=topic,
+                    total_attempted=0,
+                    correct_count=0
+                )
+                db.session.add(topic_record)
+            
+            if topic_record.total_attempted is None:
+                topic_record.total_attempted = 0
+            if topic_record.correct_count is None:
+                topic_record.correct_count = 0
+
+            topic_record.total_attempted += stats["total"]
+            topic_record.correct_count += stats["correct"]
+
         db.session.commit()
-        logger.info(f"Result saved for user {user_id} on course {course_id}: {score}%")
+        logger.info(f"Result and Topic Stats saved for user {user_id} on course {course_id}: {score}%")
         return result
 
     @staticmethod
@@ -70,6 +106,7 @@ class QuizService:
             option_d=data["option_d"],
             correct_answer=data["correct_answer"].upper(),
             difficulty=data.get("difficulty", "medium"),
+            topic=data.get("topic", "General"),
             explanation=data.get("explanation")
         )
         db.session.add(question)

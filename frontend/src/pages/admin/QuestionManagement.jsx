@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
 import quizService from '../../services/quizService';
 import courseService from '../../services/courseService';
-import { Plus, Edit2, Trash2, ArrowLeft, Loader2, Save, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, ArrowLeft, Loader2, Save, X, UploadCloud } from 'lucide-react';
 import toast from 'react-hot-toast';
+import BulkImportModal from '../../components/BulkImportModal';
 
 const QuestionManagement = () => {
     const { courseId } = useParams();
@@ -12,7 +13,9 @@ const QuestionManagement = () => {
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState(null);
+    const [selectedQuestions, setSelectedQuestions] = useState([]); // Array of selected IDs
 
     const [formData, setFormData] = useState({
         question_text: '',
@@ -37,10 +40,41 @@ const QuestionManagement = () => {
             ]);
             setCourse(courseData);
             setQuestions(quizData.questions || []);
+            setSelectedQuestions([]); // Clear selections on fetch
         } catch (err) {
             toast.error("Failed to fetch data");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSelectQuestion = (id) => {
+        setSelectedQuestions(prev => 
+            prev.includes(id) ? prev.filter(qId => qId !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAll = () => {
+        if (selectedQuestions.length === questions.length) {
+            setSelectedQuestions([]);
+        } else {
+            setSelectedQuestions(questions.map(q => q.id));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${selectedQuestions.length} selected question(s)?`)) return;
+        
+        try {
+            // Delete sequentially or parallelly
+            await Promise.all(selectedQuestions.map(id => quizService.deleteQuestion(id)));
+            toast.success(`${selectedQuestions.length} questions removed successfully`);
+            fetchInitialData();
+        } catch (err) {
+            console.error("Bulk delete error:", err);
+            const msg = err.response?.data?.message || err.response?.data?.error || err.message || "Error occurred while deleting some questions";
+            toast.error(`Error: ${msg}`);
+            fetchInitialData(); // Refresh to see what's left
         }
     };
 
@@ -107,7 +141,9 @@ const QuestionManagement = () => {
             toast.success("Question removed");
             fetchInitialData();
         } catch (err) {
-            toast.error("Error deleting question");
+            console.error("Delete error:", err);
+            const msg = err.response?.data?.message || err.response?.data?.error || "Error deleting question";
+            toast.error(msg);
         }
     };
 
@@ -123,14 +159,43 @@ const QuestionManagement = () => {
                 </div>
             </div>
 
-            <div className="mb-8 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-gray-700">{questions.length} Questions Found</h2>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-100"
-                >
-                    <Plus className="h-5 w-5" /> Add Question
-                </button>
+            <div className="mb-8 flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-bold text-gray-700">{questions.length} Questions</h2>
+                    {questions.length > 0 && (
+                        <div className="flex items-center gap-2 border-l pl-4">
+                            <input 
+                                type="checkbox" 
+                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                checked={selectedQuestions.length === questions.length && questions.length > 0}
+                                onChange={handleSelectAll}
+                            />
+                            <span className="text-sm font-medium text-gray-600">Select All</span>
+                        </div>
+                    )}
+                </div>
+                <div className="flex gap-4">
+                    {selectedQuestions.length > 0 && (
+                        <button
+                            onClick={handleBulkDelete}
+                            className="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-red-100"
+                        >
+                            <Trash2 className="h-5 w-5" /> Delete Selected ({selectedQuestions.length})
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setIsBulkModalOpen(true)}
+                        className="bg-gray-900 hover:bg-black text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-gray-100"
+                    >
+                        <UploadCloud className="h-5 w-5" /> Bulk Import
+                    </button>
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-100"
+                    >
+                        <Plus className="h-5 w-5" /> Add Question
+                    </button>
+                </div>
             </div>
 
             <div className="space-y-6">
@@ -143,16 +208,24 @@ const QuestionManagement = () => {
                     </div>
                 ) : (
                     questions.map((q, idx) => (
-                        <div key={q.id} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm relative group">
-                            <div className="flex justify-between mb-4">
+                        <div key={q.id} className={`bg-white p-8 rounded-3xl border shadow-sm relative group transition-all ${selectedQuestions.includes(q.id) ? 'border-blue-400 ring-4 ring-blue-50' : 'border-gray-100'}`}>
+                            <div className="absolute top-8 left-8">
+                                <input 
+                                    type="checkbox"
+                                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                    checked={selectedQuestions.includes(q.id)}
+                                    onChange={() => handleSelectQuestion(q.id)}
+                                />
+                            </div>
+                            <div className="flex justify-between mb-4 pl-10">
                                 <span className="text-xs font-black text-blue-600 uppercase tracking-widest">Question {idx + 1} • {q.difficulty}</span>
                                 <div className="flex space-x-2">
                                     <button onClick={() => handleOpenModal(q)} className="p-1 text-gray-300 hover:text-indigo-600 transition-colors"><Edit2 size={18} /></button>
                                     <button onClick={() => handleDelete(q.id)} className="p-1 text-gray-300 hover:text-red-600 transition-colors"><Trash2 size={18} /></button>
                                 </div>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-6">{q.question_text}</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                            <h3 className="text-xl font-bold text-gray-900 mb-6 pl-10">{q.question_text}</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 pl-10">
                                 {[
                                     { key: 'A', val: q.option_a },
                                     { key: 'B', val: q.option_b },
@@ -234,6 +307,13 @@ const QuestionManagement = () => {
                     </div>
                 </div>
             )}
+            {/* Bulk Import Modal */}
+            <BulkImportModal 
+                isOpen={isBulkModalOpen}
+                onClose={() => setIsBulkModalOpen(false)}
+                courseId={courseId}
+                onComplete={fetchInitialData}
+            />
         </AdminLayout>
     );
 };

@@ -30,9 +30,10 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         const data = await authService.login(email, password);
+        console.log("AuthContext: login success, updating state", data.role);
         setAuthState({
             user: data.user,
-            token: data.access_token,
+            token: data.token || data.access_token,
             isAuthenticated: true,
             loading: false,
         });

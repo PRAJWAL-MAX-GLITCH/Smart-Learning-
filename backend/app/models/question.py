@@ -14,7 +14,9 @@ class Question(db.Model):
     option_d = db.Column(db.String(255), nullable=False)
     correct_answer = db.Column(db.String(1), nullable=False)  # A | B | C | D
     difficulty = db.Column(db.String(20), default="medium")  # easy | medium | hard
+    topic = db.Column(db.String(50), default="General")      # Added for AI Insights
     explanation = db.Column(db.Text, nullable=True)          # pedagogical feedback
+    marks = db.Column(db.Integer, default=1)                 # points for question
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self, include_answer=False):
@@ -29,7 +31,9 @@ class Question(db.Model):
                 "D": self.option_d,
             },
             "difficulty": self.difficulty,
+            "topic": self.topic,
             "explanation": self.explanation,
+            "marks": self.marks,
             "created_at": self.created_at.isoformat(),
         }
         if include_answer:

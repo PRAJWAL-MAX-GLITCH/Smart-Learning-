@@ -14,16 +14,23 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
         );
     }
 
-    if (!user) {
-        // Redirect to login but save the current location
+    // Fallback: Check localStorage if user state is not yet synced
+    const token = localStorage.getItem('token');
+    const storedRole = localStorage.getItem('role')?.toLowerCase();
+
+    if (!user && !token) {
+        console.log(`DEBUG [PROTECTED]: No user/token. Redirecting from ${location.pathname} to login.`);
         const loginPath = location.pathname.startsWith('/admin') ? '/admin/login' : '/login';
         return <Navigate to={loginPath} state={{ from: location }} replace />;
     }
 
-    // Role check - If allowedRoles is provided, ensure user has one of them
-    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-        // Redirect unauthorized users to their respective home
-        return <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} replace />;
+    const currentRole = (user?.role || storedRole || "").toLowerCase();
+    console.log(`DEBUG [PROTECTED]: Role check on ${location.pathname}. Current: ${currentRole}, Allowed:`, allowedRoles);
+
+    // Role check
+    if (allowedRoles.length > 0 && !allowedRoles.includes(currentRole)) {
+        console.warn(`DEBUG [PROTECTED]: Access Denied for ${currentRole} on ${location.pathname}`);
+        return <Navigate to={currentRole === 'admin' ? "/admin/dashboard" : "/dashboard"} replace />;
     }
 
     return children;

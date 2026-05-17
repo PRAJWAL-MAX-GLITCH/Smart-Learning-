@@ -3,13 +3,13 @@ import Navbar from './Navbar';
 
 const Layout = ({ children }) => {
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="flex flex-col min-h-screen w-full bg-gray-50 overflow-x-hidden">
             <Navbar />
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="flex-1 w-full px-4 sm:px-8 lg:px-12 py-8">
                 {children}
             </main>
-            <footer className="bg-white border-t py-8 mt-auto">
-                <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
+            <footer className="w-full bg-white border-t border-gray-100 py-8 mt-auto">
+                <div className="w-full px-8 text-center text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">
                     &copy; {new Date().getFullYear()} AI Smart Learning Platform. All rights reserved.
                 </div>
             </footer>

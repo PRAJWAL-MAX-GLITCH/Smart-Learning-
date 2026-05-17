@@ -18,13 +18,29 @@ const AdminLogin = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
+        console.log("DEBUG [1]: Admin login form submit event fired");
+        console.log("DEBUG [2/3]: Sending API request to /api/auth/admin-login with payload", { email: formData.email, password: "****" });
+        
         try {
-            // Calls /api/auth/admin-login — backend validates role and returns 403 for non-admins
-            await authService.adminLogin(formData.email, formData.password);
-            toast.success('Welcome back, Admin!');
-            // Use href so AuthContext re-initializes from localStorage
-            window.location.href = '/admin/dashboard';
+            const data = await authService.adminLogin(formData.email, formData.password);
+            console.log("LOGIN RESPONSE:", data);
+            console.log("TOKEN:", data.token);
+            console.log("ROLE:", data.role);
+            console.log("USER:", data.user);
+            
+            const userRole = (data.role || data.user?.role || "").toLowerCase();
+            console.log("DETECTED ROLE:", userRole);
+
+            if (userRole === 'admin') {
+                toast.success('Welcome back, Admin!');
+                console.log("NAVIGATING TO: /admin/dashboard");
+                window.location.href = '/admin/dashboard';
+            } else {
+                console.warn("ROLE MISMATCH: Expected admin, got", userRole);
+                toast.error('Access Denied. Role mismatch.');
+            }
         } catch (err) {
+            console.error("DEBUG: Admin login API call failed", err);
             const status = err.response?.status;
             if (status === 403) {
                 toast.error('Access Denied. Admin accounts only.');

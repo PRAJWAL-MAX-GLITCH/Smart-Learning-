@@ -49,6 +49,21 @@ class Certificate(db.Model):
     certificate_code = db.Column(db.String(100), unique=True)
     issued_at = db.Column(db.DateTime, default=datetime.utcnow)
     score = db.Column(db.Float)
+    
+    def to_dict(self):
+        from app.models.user import User
+        from app.models.course import Course
+        user = User.query.get(self.user_id)
+        course = Course.query.get(self.course_id)
+        return {
+            "id": self.id,
+            "certificate_code": self.certificate_code,
+            "issued_at": self.issued_at.isoformat(),
+            "score": self.score,
+            "student_name": f"{user.first_name} {user.last_name}" if user and user.first_name else (user.username if user else "Student"),
+            "course_name": course.title if course else "Course",
+            "course_id": self.course_id
+        }
 
 class Notification(db.Model):
     __tablename__ = 'notifications'

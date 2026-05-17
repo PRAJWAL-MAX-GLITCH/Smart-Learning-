@@ -25,7 +25,18 @@ class CourseController:
         course = CourseService.get_course_by_id(course_id)
         if not course:
             return jsonify({"error": "Course not found"}), 404
-        return jsonify(course_schema.dump(course)), 200
+        
+        # Serialize course basic info
+        data = course_schema.dump(course)
+        
+        # Explicitly fetch lessons and convert to dict manually
+        from app.models.premium_models import Lesson
+        lessons = Lesson.query.filter_by(course_id=course_id).order_by(Lesson.order_index.asc()).all()
+        
+        data['lessons'] = [l.to_dict() for l in lessons]
+        print(f"BULLETPROOF DEBUG: Attached {len(data['lessons'])} lessons to course {course_id}")
+            
+        return jsonify(data), 200
 
     @staticmethod
     def create_course():
@@ -35,11 +46,17 @@ class CourseController:
         except ValidationError as err:
             return jsonify({"error": "Validation failed", "messages": err.messages}), 400
 
-        course = CourseService.create_course(data, user_id)
-        return jsonify({
-            "message": "Course created successfully",
-            "course": course_schema.dump(course)
-        }), 201
+        try:
+            course = CourseService.create_course(data, user_id)
+            return jsonify({
+                "message": "Course created successfully",
+                "course": course_schema.dump(course)
+            }), 201
+        except Exception as e:
+            print(f"ERROR creating course: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
     @staticmethod
     def update_course(course_id):

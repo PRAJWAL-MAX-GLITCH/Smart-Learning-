@@ -12,7 +12,7 @@ const progressService = {
     },
 
     trackLessonProgress: async (courseId, lessonId) => {
-        const response = await api.post('/lessons/progress', { course_id: courseId, lesson_id: lessonId });
+        const response = await api.post('/progress/track', { course_id: courseId, lesson_id: lessonId });
         return response.data;
     }
 };

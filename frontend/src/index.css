@@ -6,10 +6,26 @@
   --color-background-alt: #f3f4f6;
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 @layer base {
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  #root {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
   body {
     background-color: var(--color-background-alt);
     color: var(--color-secondary);
+    -webkit-font-smoothing: antialiased;
   }
 }
 

@@ -13,3 +13,8 @@ def get_progress(course_id):
 @jwt_required()
 def mark_completed():
     return ProgressController.mark_completed()
+
+@progress_bp.route('/track', methods=['POST'])
+@jwt_required()
+def track_progress():
+    return ProgressController.track_progress()

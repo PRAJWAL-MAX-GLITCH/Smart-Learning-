@@ -73,7 +73,8 @@ const LessonManagement = () => {
             setIsModalOpen(false);
             fetchLessons();
         } catch (err) {
-            toast.error(err.response?.data?.message || "Operation failed");
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || "Operation failed";
+            toast.error(errorMsg);
         } finally {
             setIsSubmitting(false);
         }

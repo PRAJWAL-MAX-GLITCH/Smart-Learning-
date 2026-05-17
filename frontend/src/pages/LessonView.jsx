@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { PlayCircle, CheckCircle, ChevronRight, BookOpen, FileText, ArrowLeft, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import api from '../services/api';
 
 const LessonView = () => {
     const { courseId, lessonId } = useParams();
@@ -19,17 +19,18 @@ const LessonView = () => {
 
     const fetchLessonData = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const headers = { Authorization: `Bearer ${token}` };
-            
-            // In a real app, these would be in services
+            // Using the centralized api service
             const [courseRes, progressRes] = await Promise.all([
-                axios.get(`http://127.0.0.1:5000/api/courses/${courseId}`, { headers }),
-                axios.get(`http://127.0.0.1:5000/api/progress/${courseId}`, { headers })
+                api.get(`/courses/${courseId}`),
+                api.get(`/progress/${courseId}`)
             ]);
 
             setCourse(courseRes.data);
-            const lesson = courseRes.data.lessons.find(l => l.id === parseInt(lessonId)) || courseRes.data.lessons[0];
+            console.log("DEBUG LessonView: Course Data:", courseRes.data);
+            const lessons = courseRes.data.lessons || [];
+            console.log("DEBUG LessonView: Lessons:", lessons);
+            setProgress(progressRes.data.completed_lesson_ids || []);
+            const lesson = lessons.find(l => l.id === parseInt(lessonId)) || lessons[0];
             setCurrentLesson(lesson);
             setLoading(false);
         } catch (err) {
@@ -39,15 +40,26 @@ const LessonView = () => {
     };
 
     const handleLessonComplete = async () => {
-        // API call to mark lesson as completed
-        toast.success("Lesson completed! Moving to next...");
-        const currentIndex = course.lessons.findIndex(l => l.id === currentLesson.id);
-        if (currentIndex < course.lessons.length - 1) {
-            const nextLesson = course.lessons[currentIndex + 1];
-            navigate(`/courses/${courseId}/lessons/${nextLesson.id}`);
-        } else {
-            toast.success("Course finished! Take the quiz.");
-            navigate(`/quiz/${courseId}`);
+        try {
+            // API call to mark lesson as completed
+            await api.post(`/progress/track`, {
+                course_id: parseInt(courseId),
+                lesson_id: parseInt(lessonId)
+            });
+
+            toast.success("Lesson completed! Moving to next...");
+            
+            const currentIndex = course.lessons.findIndex(l => l.id === parseInt(lessonId));
+            if (currentIndex < course.lessons.length - 1) {
+                const nextLesson = course.lessons[currentIndex + 1];
+                navigate(`/courses/${courseId}/lessons/${nextLesson.id}`);
+            } else {
+                toast.success("Course finished! Take the quiz.");
+                navigate(`/courses/${courseId}`); // Go back to course detail to see quiz unlocked
+            }
+        } catch (err) {
+            toast.error("Failed to save progress. Please try again.");
+            console.error(err);
         }
     };
 
@@ -115,7 +127,11 @@ const LessonView = () => {
                                         <h4 className={`text-sm font-bold ${currentLesson?.id === lesson.id ? 'text-blue-700' : 'text-gray-700'}`}>{lesson.title}</h4>
                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">12:00 mins</p>
                                     </div>
-                                    {idx === 0 ? <CheckCircle className="text-green-500" size={18} /> : <PlayCircle className="text-gray-200" size={18} />}
+                                    {progress.includes(lesson.id) ? (
+                                        <CheckCircle className="text-green-500" size={18} />
+                                    ) : (
+                                        <PlayCircle className="text-gray-200" size={18} />
+                                    )}
                                 </button>
                             ))}
                         </div>

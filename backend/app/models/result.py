@@ -14,8 +14,14 @@ class Result(db.Model):
     feedback = db.Column(db.String(20))                 # Weak | Average | Strong
     time_taken = db.Column(db.Integer, nullable=True)     # in seconds
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    topic_performance = db.Column(db.Text, nullable=True) # JSON string of topic-wise performance
 
     def to_dict(self):
+        import json
+        try:
+            topic_perf = json.loads(self.topic_performance) if self.topic_performance else {}
+        except Exception:
+            topic_perf = {}
         return {
             "id": self.id,
             "user_id": self.user_id,
@@ -26,4 +32,5 @@ class Result(db.Model):
             "feedback": self.feedback,
             "time_taken": self.time_taken,
             "submitted_at": self.submitted_at.isoformat(),
+            "topic_performance": topic_perf
         }

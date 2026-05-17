@@ -59,18 +59,31 @@ const CourseManagement = () => {
         }
         
         setIsSubmitting(true);
+        const payload = {
+            ...formData,
+            total_lessons: formData.total_lessons === '' ? null : parseInt(formData.total_lessons)
+        };
+        
         try {
             if (editingCourse) {
-                await courseService.updateCourse(editingCourse.id, formData);
+                await courseService.updateCourse(editingCourse.id, payload);
                 toast.success("Course updated successfully");
             } else {
-                await courseService.createCourse(formData);
+                await courseService.createCourse(payload);
                 toast.success("Course created successfully");
             }
             setIsModalOpen(false);
             fetchCourses();
         } catch (err) {
-            toast.error(err.response?.data?.message || "Operation failed");
+            if (err.response?.data?.error === "Validation failed" && err.response?.data?.messages) {
+                const errors = err.response.data.messages;
+                const firstField = Object.keys(errors)[0];
+                const firstMsg = Array.isArray(errors[firstField]) ? errors[firstField][0] : errors[firstField];
+                toast.error(`${firstField}: ${firstMsg}`);
+            } else {
+                const msg = err.response?.data?.error || err.response?.data?.message || "Operation failed";
+                toast.error(msg);
+            }
         } finally {
             setIsSubmitting(false);
         }

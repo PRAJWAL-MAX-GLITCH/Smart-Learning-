@@ -14,6 +14,11 @@ def login():
     return AuthController.login()
 
 
+@auth_bp.route("/verify-2fa", methods=["POST"])
+def verify_2fa():
+    return AuthController.verify_2fa()
+
+
 @auth_bp.route("/admin-login", methods=["POST"])
 def admin_login():
     """Dedicated admin login — returns 403 if the user is not an admin."""
@@ -42,6 +47,12 @@ def admin_login():
     )
     return jsonify({
         "message": "Admin login successful",
-        "access_token": access_token,
-        "user": user.to_dict(),
+        "token": access_token,
+        "role": user.role,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "name": f"{user.first_name} {user.last_name}" if user.first_name else user.username,
+            "role": user.role
+        },
     }), 200

@@ -18,8 +18,6 @@ const quizService = {
         const response = await api.get('/results/my');
         return response.data;
     },
-
-    // Admin Specific Methods
     createQuestion: async (questionData) => {
         const response = await api.post('/quizzes/questions', questionData);
         return response.data;

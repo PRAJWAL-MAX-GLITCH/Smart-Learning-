@@ -3,18 +3,31 @@ import api from './api';
 const authService = {
     login: async (email, password) => {
         const response = await api.post('/auth/login', { email, password });
-        if (response.data.access_token) {
-            localStorage.setItem('token', response.data.access_token);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
+        console.log("LOGIN RESPONSE:", response.data);
+        
+        const token = response.data.token || response.data.access_token;
+        if (token) {
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(response.data.user));
+            localStorage.setItem("role", response.data.role);
+            console.log("TOKEN:", token);
+            console.log("ROLE:", response.data.role);
         }
         return response.data;
     },
 
     adminLogin: async (email, password) => {
+        console.log("AuthService: adminLogin request started");
         const response = await api.post('/auth/admin-login', { email, password });
-        if (response.data.access_token) {
-            localStorage.setItem('token', response.data.access_token);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
+        console.log("LOGIN RESPONSE (ADMIN):", response.data);
+        
+        const token = response.data.token || response.data.access_token;
+        if (token) {
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(response.data.user));
+            localStorage.setItem("role", response.data.role);
+            console.log("TOKEN:", token);
+            console.log("ROLE:", response.data.role);
         }
         return response.data;
     },
@@ -27,6 +40,7 @@ const authService = {
     logout: () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('role');
     },
 
     getCurrentUser: () => {

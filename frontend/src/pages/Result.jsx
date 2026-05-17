@@ -1,12 +1,32 @@
 import React from 'react';
-import { useLocation, Link, Navigate } from 'react-router-dom';
+import { useParams, useLocation, Link, Navigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { Trophy, RefreshCw, LayoutDashboard, CheckCircle2, XCircle } from 'lucide-react';
+import { Trophy, RefreshCw, LayoutDashboard, CheckCircle2, XCircle, Award, Loader2 } from 'lucide-react';
+import quizService from '../services/quizService';
 
 const Result = () => {
+    const { id } = useParams();
     const location = useLocation();
-    const result = location.state?.result;
+    const [result, setResult] = React.useState(location.state?.result || null);
+    const [loading, setLoading] = React.useState(!result);
 
+    React.useEffect(() => {
+        if (!result && id) {
+            const fetchResult = async () => {
+                try {
+                    const data = await quizService.getResult(id);
+                    setResult(data);
+                } catch (err) {
+                    console.error("Failed to fetch result:", err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchResult();
+        }
+    }, [id, result]);
+
+    if (loading) return <Layout><div className="flex justify-center py-20"><Loader2 className="animate-spin h-12 w-12 text-blue-600" /></div></Layout>;
     if (!result) return <Navigate to="/dashboard" />;
 
     const isSuccess = result.score >= 80;
@@ -45,6 +65,45 @@ const Result = () => {
                         </div>
                     </div>
 
+                    {(() => {
+                        let tp = result.topic_performance;
+                        if (typeof tp === 'string') {
+                            try { tp = JSON.parse(tp); } catch (e) { tp = null; }
+                        }
+                        if (!tp || Object.keys(tp).length === 0) return null;
+
+                        return (
+                            <div className="text-left mb-8">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">Topic Breakdown</h3>
+                                <div className="space-y-3">
+                                    {Object.entries(tp).map(([topic, stats]) => {
+                                    const accuracy = Math.round((stats.correct / stats.total) * 100) || 0;
+                                    let level = 'Weak';
+                                    let color = 'text-red-600 bg-red-100 border-red-200';
+                                    if (accuracy > 75) {
+                                        level = 'Strong';
+                                        color = 'text-green-600 bg-green-100 border-green-200';
+                                    } else if (accuracy >= 50) {
+                                        level = 'Average';
+                                        color = 'text-blue-600 bg-blue-100 border-blue-200';
+                                    }
+                                    return (
+                                        <div key={topic} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl gap-2">
+                                            <div className="font-semibold text-gray-800">{topic}</div>
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-sm font-medium text-gray-500">{stats.correct}/{stats.total} Correct ({accuracy}%)</span>
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${color}`}>
+                                                    {level}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        );
+                    })()}
+
                     <div className={`p-6 rounded-2xl mb-10 flex items-center space-x-4 border ${isSuccess ? 'bg-green-50 border-green-100 text-green-800' : 'bg-blue-50 border-blue-100 text-blue-800'
                         }`}>
                         {isSuccess ? <CheckCircle2 className="h-8 w-8 text-green-500" /> : <RefreshCw className="h-8 w-8 text-blue-500" />}
@@ -59,15 +118,18 @@ const Result = () => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-4">
+                        {isSuccess && (
+                            <Link 
+                                to={`/certificate/${result.course_id}`} 
+                                className="flex-1 bg-gray-900 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg shadow-gray-200"
+                            >
+                                <Award className="h-5 w-5 text-yellow-400" />
+                                <span>View Certificate</span>
+                            </Link>
+                        )}
                         <Link to="/dashboard" className="flex-1 btn-primary py-4 flex items-center justify-center gap-2">
                             <LayoutDashboard className="h-5 w-5" />
                             <span>Go to Dashboard</span>
-                        </Link>
-                        <Link
-                            to={`/courses/${result.course_id}`}
-                            className="flex-1 border-2 border-gray-100 py-4 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors"
-                        >
-                            Back to Course
                         </Link>
                     </div>
                 </div>

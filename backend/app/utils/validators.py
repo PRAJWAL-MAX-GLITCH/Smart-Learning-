@@ -11,6 +11,19 @@ def validate_password(password: str) -> bool:
     return len(password) >= 8
 
 
+def validate_strong_password(password: str) -> bool:
+    """Must be 8+ chars, with at least one number, one uppercase and one special char."""
+    if len(password) < 8:
+        return False
+    if not re.search(r"\d", password):
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        return False
+    return True
+
+
 def validate_required_fields(data: dict, required_fields: list) -> list:
     """Return a list of missing or empty required field names."""
     return [field for field in required_fields if not data.get(field)]

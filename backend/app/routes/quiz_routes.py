@@ -24,6 +24,12 @@ def add_question():
     return QuizController.add_question()
 
 
+@quizzes_bp.route("/bulk", methods=["POST"])
+@admin_required
+def add_questions_bulk():
+    return QuizController.add_questions_bulk()
+
+
 @quizzes_bp.route("/questions/<int:question_id>", methods=["PUT"])
 @admin_required
 def update_question(question_id):

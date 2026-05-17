@@ -30,22 +30,22 @@ const courseService = {
 
     // Lesson Methods
     getLessons: async (courseId) => {
-        const response = await api.get(`/lessons/course/${courseId}`);
+        const response = await api.get(`/admin/lessons/course/${courseId}`);
         return response.data;
     },
 
     addLesson: async (lessonData) => {
-        const response = await api.post('/lessons', lessonData);
+        const response = await api.post('/admin/lessons', lessonData);
         return response.data;
     },
 
     updateLesson: async (id, lessonData) => {
-        const response = await api.put(`/lessons/${id}`, lessonData);
+        const response = await api.put(`/admin/lessons/${id}`, lessonData);
         return response.data;
     },
 
     deleteLesson: async (id) => {
-        const response = await api.delete(`/lessons/${id}`);
+        const response = await api.delete(`/admin/lessons/${id}`);
         return response.data;
     }
 };

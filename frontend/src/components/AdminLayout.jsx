@@ -9,7 +9,8 @@ import {
     Settings,
     Users,
     ChevronRight,
-    ShieldCheck
+    ShieldCheck,
+    Terminal
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -26,8 +27,9 @@ const AdminLayout = ({ children }) => {
 
     const navItems = [
         { label: 'Overview', path: '/admin', icon: <BarChart3 size={20} /> },
-        { label: 'Manage Courses', path: '/admin/courses', icon: <BookOpen size={20} /> },
-        { label: 'Manage Students', path: '/admin/students', icon: <Users size={20} /> },
+        { label: 'Courses', path: '/admin/courses', icon: <BookOpen size={20} /> },
+        { label: 'Students', path: '/admin/students', icon: <Users size={20} /> },
+        { label: 'System Logs', path: '/admin/logs', icon: <Terminal size={20} /> },
         { label: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
     ];
 

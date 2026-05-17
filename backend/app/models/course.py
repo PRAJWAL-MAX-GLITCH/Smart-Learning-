@@ -29,9 +29,9 @@ class Course(db.Model):
             "description": self.description,
             "category": self.category,
             "youtube_url": self.youtube_url,
-            "duration": self.duration or "4.5 Hours",
-            "total_lessons": self.total_lessons or 1,
-            "difficulty_level": self.difficulty_level or "Intermediate",
+            "duration": self.duration,
+            "total_lessons": self.total_lessons,
+            "difficulty_level": self.difficulty_level,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat(),
         }

@@ -38,6 +38,15 @@ def create_app(config_name="default"):
         db.create_all()
         auto_migrate_db(app)
 
+    # Global Error Handler for Debugging
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        app.logger.error(f"Unhandled Exception: {str(e)}")
+        return jsonify({
+            "error": "Internal Server Error",
+            "message": str(e)
+        }), 500
+
     return app
 
 
@@ -57,11 +66,27 @@ def auto_migrate_db(app):
             "user_lesson_progress": [
                 ("course_id", "INTEGER"),
             ],
+            "user_course_progress": [
+                ("last_watched_lesson_id", "INTEGER"),
+                ("updated_at", "TIMESTAMP"),
+            ],
+            "lessons": [
+                ("duration", "TEXT DEFAULT '10 Mins'"),
+                ("order_index", "INTEGER DEFAULT 0"),
+            ],
+            "questions": [
+                ("marks", "INTEGER DEFAULT 1"),
+                ("explanation", "TEXT"),
+                ("topic", "VARCHAR(50) DEFAULT 'General'"),
+            ],
             "courses": [
                 ("duration", "TEXT"),
                 ("total_lessons", "INTEGER DEFAULT 1"),
                 ("difficulty_level", "TEXT DEFAULT 'Intermediate'"),
                 ("youtube_url", "TEXT"),
+            ],
+            "results": [
+                ("topic_performance", "TEXT"),
             ],
         }
         for table, columns in migrations.items():
@@ -84,7 +109,11 @@ def register_blueprints(app):
     from app.routes.result_routes import results_bp
     from app.routes.admin_routes import admin_bp
     from app.routes.progress_routes import progress_bp
+    from app.routes.analytics_routes import analytics_bp
+    from app.routes.notification_routes import notification_bp
+    from app.routes.ai_routes import ai_bp
     from app.models.progress import UserCourseProgress 
+    from app.models.settings import SystemSettings
     from app.models.premium_models import Lesson, UserLessonProgress, Note, Certificate, Notification
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -94,8 +123,17 @@ def register_blueprints(app):
     app.register_blueprint(results_bp, url_prefix="/api/results")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(progress_bp, url_prefix="/api/progress")
+    app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
+    app.register_blueprint(notification_bp, url_prefix="/api/notifications")
+    app.register_blueprint(ai_bp, url_prefix="/api/ai")
     from app.routes.lesson_routes import lesson_bp
     app.register_blueprint(lesson_bp, url_prefix="/api/admin/lessons")
+
+    from app.controllers.certificate_controller import certificate_bp
+    app.register_blueprint(certificate_bp, url_prefix='/api/certificates')
+
+    from app.controllers.bulk_quiz_controller import bulk_quiz_bp
+    app.register_blueprint(bulk_quiz_bp, url_prefix='/api/admin/bulk-quiz')
 
 
 def register_error_handlers(app):
