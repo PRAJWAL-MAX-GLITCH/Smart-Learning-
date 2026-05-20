@@ -17,6 +17,7 @@ class Question(db.Model):
     topic = db.Column(db.String(50), default="General")      # Added for AI Insights
     explanation = db.Column(db.Text, nullable=True)          # pedagogical feedback
     marks = db.Column(db.Integer, default=1)                 # points for question
+    is_ai_generated = db.Column(db.Boolean, default=False)   # Track AI origin
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self, include_answer=False):
@@ -34,6 +35,7 @@ class Question(db.Model):
             "topic": self.topic,
             "explanation": self.explanation,
             "marks": self.marks,
+            "is_ai_generated": self.is_ai_generated,
             "created_at": self.created_at.isoformat(),
         }
         if include_answer:

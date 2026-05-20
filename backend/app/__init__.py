@@ -112,6 +112,7 @@ def register_blueprints(app):
     from app.routes.analytics_routes import analytics_bp
     from app.routes.notification_routes import notification_bp
     from app.routes.ai_routes import ai_bp
+    from app.routes.ml_routes import ml_bp
     from app.models.progress import UserCourseProgress 
     from app.models.settings import SystemSettings
     from app.models.premium_models import Lesson, UserLessonProgress, Note, Certificate, Notification
@@ -126,6 +127,7 @@ def register_blueprints(app):
     app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
     app.register_blueprint(notification_bp, url_prefix="/api/notifications")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
+    app.register_blueprint(ml_bp, url_prefix="/api/ml")
     from app.routes.lesson_routes import lesson_bp
     app.register_blueprint(lesson_bp, url_prefix="/api/admin/lessons")
 

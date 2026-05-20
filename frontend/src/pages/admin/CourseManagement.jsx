@@ -11,7 +11,17 @@ const CourseManagement = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCourse, setEditingCourse] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [formData, setFormData] = useState({ title: '', description: '', category: '', youtube_url: '', duration: '', total_lessons: '', difficulty_level: 'Beginner' });
+    const [formData, setFormData] = useState({ 
+        title: '', 
+        description: '', 
+        category: 'Coding', 
+        topic: '',
+        thumbnail_url: '', 
+        youtube_url: '', 
+        duration: '', 
+        total_lessons: '', 
+        difficulty_level: 'Beginner' 
+    });
 
     useEffect(() => {
         fetchCourses();
@@ -34,7 +44,9 @@ const CourseManagement = () => {
             setFormData({ 
                 title: course.title, 
                 description: course.description, 
-                category: course.category, 
+                category: course.category || 'Coding', 
+                topic: course.topic || '',
+                thumbnail_url: course.thumbnail_url || '',
                 youtube_url: course.youtube_url || '',
                 duration: course.duration || '',
                 total_lessons: course.total_lessons || '',
@@ -42,7 +54,17 @@ const CourseManagement = () => {
             });
         } else {
             setEditingCourse(null);
-            setFormData({ title: '', description: '', category: '', youtube_url: '', duration: '', total_lessons: '', difficulty_level: 'Beginner' });
+            setFormData({ 
+                title: '', 
+                description: '', 
+                category: 'Coding', 
+                topic: '',
+                thumbnail_url: '', 
+                youtube_url: '', 
+                duration: '', 
+                total_lessons: '', 
+                difficulty_level: 'Beginner' 
+            });
         }
         setIsModalOpen(true);
     };
@@ -61,6 +83,7 @@ const CourseManagement = () => {
         setIsSubmitting(true);
         const payload = {
             ...formData,
+            topic: formData.topic.trim() || formData.category,
             total_lessons: formData.total_lessons === '' ? null : parseInt(formData.total_lessons)
         };
         
@@ -187,28 +210,54 @@ const CourseManagement = () => {
                                     onChange={e => setFormData({ ...formData, title: e.target.value })}
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
-                                <input
-                                    type="text" required className="input-field" value={formData.category}
-                                    onChange={e => setFormData({ ...formData, category: e.target.value })}
-                                    placeholder="e.g. Physics, Coding, Mathematics"
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
+                                    <select 
+                                        required className="input-field" value={formData.category}
+                                        onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                    >
+                                        <option value="Coding">Coding</option>
+                                        <option value="General">General</option>
+                                        <option value="Mathematics">Mathematics</option>
+                                        <option value="Physics">Physics</option>
+                                        <option value="Chemistry">Chemistry</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Topic (Optional)</label>
+                                    <input
+                                        type="text" className="input-field" value={formData.topic}
+                                        onChange={e => setFormData({ ...formData, topic: e.target.value })}
+                                        placeholder="e.g. HTML, Recommender Systems"
+                                    />
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
                                 <textarea
-                                    rows="4" className="input-field" value={formData.description}
+                                    rows="3" className="input-field" value={formData.description}
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                                 ></textarea>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Course Video Link (YouTube)</label>
-                                <input
-                                    type="url" className="input-field" value={formData.youtube_url}
-                                    onChange={e => setFormData({ ...formData, youtube_url: e.target.value })}
-                                    placeholder="https://www.youtube.com/watch?v=..."
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Course Video Link (YouTube)</label>
+                                    <input
+                                        type="url" className="input-field" value={formData.youtube_url}
+                                        onChange={e => setFormData({ ...formData, youtube_url: e.target.value })}
+                                        placeholder="https://www.youtube.com/watch?v=..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Thumbnail URL (Optional)</label>
+                                    <input
+                                        type="text" className="input-field" value={formData.thumbnail_url}
+                                        onChange={e => setFormData({ ...formData, thumbnail_url: e.target.value })}
+                                        placeholder="https://images.unsplash.com/... or leave blank"
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-3 gap-4">

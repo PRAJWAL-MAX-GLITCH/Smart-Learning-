@@ -14,6 +14,8 @@ class Course(db.Model):
     duration = db.Column(db.String(50), nullable=True)           # e.g. "4.5 Hours"
     total_lessons = db.Column(db.Integer, nullable=True)         # e.g. 12
     difficulty_level = db.Column(db.String(30), nullable=True)   # Beginner/Intermediate/Advanced
+    topic = db.Column(db.String(100), nullable=True)
+    thumbnail_url = db.Column(db.String(500), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -28,6 +30,8 @@ class Course(db.Model):
             "title": self.title,
             "description": self.description,
             "category": self.category,
+            "topic": self.topic,
+            "thumbnail_url": self.thumbnail_url,
             "youtube_url": self.youtube_url,
             "duration": self.duration,
             "total_lessons": self.total_lessons,

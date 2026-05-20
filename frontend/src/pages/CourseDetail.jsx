@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import YouTube from 'react-youtube';
 import Layout from '../components/Layout';
 import courseService from '../services/courseService';
 import progressService from '../services/progressService';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Clock, Award, Star, ArrowLeft, CheckCircle, Lock, Play, Shield, ChevronRight, Eye, List } from 'lucide-react';
+import { BookOpen, Clock, Award, Star, ArrowLeft, CheckCircle, Lock, Play, Shield, ChevronRight, Eye, List, BrainCircuit, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CertificatePreviewModal from '../components/CertificatePreviewModal';
+import aiService from '../services/aiService';
 
 const CourseDetail = () => {
     const { id } = useParams();
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [course, setCourse] = useState(null);
     const [lessons, setLessons] = useState([]);
     const [currentLesson, setCurrentLesson] = useState(null);
@@ -20,6 +22,7 @@ const CourseDetail = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showPreview, setShowPreview] = useState(false);
+    const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -54,7 +57,7 @@ const CourseDetail = () => {
         fetchInitialData();
     }, [id]);
 
-    const handleVideoEnd = async () => {
+    const handleMarkAsCompleted = async () => {
         if (!currentLesson) return;
         if (completedLessonIds.includes(currentLesson.id)) {
             // Already completed, move to next if exists
@@ -76,7 +79,16 @@ const CourseDetail = () => {
             if (newCompletedIds.length === lessons.length) {
                 await progressService.markAsCompleted(id);
                 setIsCourseCompleted(true);
-                toast.success("Whole course completed! Final Quiz Unlocked! 🚀");
+                toast.success("Whole course completed! Automatically launching Final Quiz... 🚀", {
+                    icon: '🎓',
+                    style: { borderRadius: '20px', background: '#10B981', color: '#fff' },
+                    duration: 3000
+                });
+                
+                // Automatically open/navigate to quiz after 2.5 seconds
+                setTimeout(() => {
+                    navigate(`/quiz/${id}`);
+                }, 2500);
             } else {
                 moveToNextLesson();
             }
@@ -89,6 +101,21 @@ const CourseDetail = () => {
         const currentIndex = lessons.findIndex(l => l.id === currentLesson.id);
         if (currentIndex < lessons.length - 1) {
             setCurrentLesson(lessons[currentIndex + 1]);
+        }
+    };
+
+    const handleGenerateAIQuiz = async () => {
+        if (!course?.id) return;
+        setIsGeneratingQuiz(true);
+        const loadingToast = toast.loading('AI is analyzing the video and generating a quiz...');
+        try {
+            await aiService.generateQuiz(course.id);
+            toast.success('AI Quiz Generated Successfully! You can now test your knowledge.', { id: loadingToast });
+        } catch (err) {
+            console.error("AI Quiz generation failed", err);
+            toast.error(err.response?.data?.error || 'Failed to generate AI Quiz', { id: loadingToast });
+        } finally {
+            setIsGeneratingQuiz(false);
         }
     };
 
@@ -133,7 +160,10 @@ const CourseDetail = () => {
                                         height: '100%',
                                         playerVars: { autoplay: 1, modestbranding: 1, rel: 0 },
                                     }}
-                                    onEnd={handleVideoEnd}
+                                    onEnd={() => toast.success("Lesson video finished! Click 'Mark as Completed' below to save progress.", {
+                                        icon: '📺',
+                                        style: { borderRadius: '20px', background: '#000', color: '#fff' }
+                                    })}
                                 />
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
@@ -172,12 +202,29 @@ const CourseDetail = () => {
                                 </h1>
                                 {currentLesson && !completedLessonIds.includes(currentLesson.id) && (
                                     <button 
-                                        onClick={handleVideoEnd}
+                                        onClick={handleMarkAsCompleted}
                                         className="bg-green-600 hover:bg-green-700 text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-green-100/50 hover:-translate-y-1 active:scale-95"
                                     >
                                         <CheckCircle size={18} /> Mark as Completed
                                     </button>
                                 )}
+                            </div>
+                            
+                            <div className="flex gap-4 mb-6">
+                                <button 
+                                    onClick={handleGenerateAIQuiz}
+                                    disabled={isGeneratingQuiz}
+                                    className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-indigo-100/50 hover:-translate-y-1 active:scale-95"
+                                >
+                                    {isGeneratingQuiz ? <Loader className="animate-spin" size={18} /> : <BrainCircuit size={18} />}
+                                    {isGeneratingQuiz ? 'Generating AI Quiz...' : 'Generate AI Quiz'}
+                                </button>
+                                <Link 
+                                    to={`/ai-quiz/${id}`}
+                                    className="bg-white border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-indigo-100/20 hover:-translate-y-1 active:scale-95"
+                                >
+                                    Take AI Quiz
+                                </Link>
                             </div>
                             <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 mb-8">
                                 <p className="text-lg text-gray-600 leading-relaxed font-medium">
@@ -197,10 +244,7 @@ const CourseDetail = () => {
                                 Playlist
                             </h3>
                         </div>
-                        
-                        <div className="p-4 bg-red-100 text-red-600 font-bold text-center">
-                            TEST: If you see this, sidebar is working!
-                        </div>
+
 
                         <div className="flex-1 overflow-y-auto p-4 space-y-2">
                             {lessons.length === 0 ? (

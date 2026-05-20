@@ -56,7 +56,9 @@ class AnalyticsController:
                 "course_title": course.title,
                 "progress": progress_percent,
                 "last_lesson": last_lesson.title if last_lesson else "Start Learning",
-                "category": course.category
+                "category": course.category,
+                "thumbnail_url": course.thumbnail_url,
+                "youtube_url": course.youtube_url
             })
 
         # 5. Real Activity Feed (Unified stream of events)
@@ -201,19 +203,30 @@ class AnalyticsController:
     def get_learning_recommendations():
         user_id = get_jwt_identity()
         from app.models.user_topic_stats import UserTopicStats
+        import logging
+        logger = logging.getLogger(__name__)
         
         # Get all topic stats for this user
         topic_stats = UserTopicStats.query.filter_by(user_id=user_id).all()
+        logger.info(f"[RECS] user_id={user_id} | topic_stats count={len(topic_stats)}")
         
         weak_topics = []
         strong_topics = []
 
         for ts in topic_stats:
             accuracy = round((ts.correct_count / ts.total_attempted * 100)) if ts.total_attempted > 0 else 0
+            logger.info(f"[RECS]   topic='{ts.topic}' | accuracy={accuracy}% | correct={ts.correct_count}/{ts.total_attempted}")
             if accuracy < 60:
                 weak_topics.append(ts.topic)
             elif accuracy >= 80:
                 strong_topics.append(ts.topic)
+
+        # FORCE TEST MODE (REQUIRED): If no quiz data OR no weak topics: simulate weak topic
+        if not topic_stats or not weak_topics:
+            weak_topics = ["Demo Topic"]
+            logger.info("[RECS] Force Test Mode active: Simulated weak topic 'Demo Topic'")
+
+        logger.info(f"[RECS] weak_topics={weak_topics} | strong_topics={strong_topics}")
 
         # Get courses the user has already completed
         completed_course_ids = [
@@ -222,39 +235,80 @@ class AnalyticsController:
 
         recommendations = []
         
-        if weak_topics:
-            # Query courses whose category matches a weak topic
-            if completed_course_ids:
-                potential_courses = Course.query.filter(Course.id.notin_(completed_course_ids), Course.category.in_(weak_topics)).all()
-            else:
-                potential_courses = Course.query.filter(Course.category.in_(weak_topics)).all()
+        # Query courses whose category matches a weak topic (case-insensitive & trimmed)
+        weak_topics_lower = [t.strip().lower() for t in weak_topics]
+        logger.info(f"[RECS] Searching courses with category in {weak_topics_lower} (excluded course_ids: {completed_course_ids})")
+        if completed_course_ids:
+            potential_courses = Course.query.filter(
+                Course.id.notin_(completed_course_ids), 
+                func.lower(func.trim(Course.category)).in_(weak_topics_lower)
+            ).all()
+        else:
+            potential_courses = Course.query.filter(
+                func.lower(func.trim(Course.category)).in_(weak_topics_lower)
+            ).all()
 
-            # Sort by difficulty: beginner -> intermediate -> advanced
-            def difficulty_score(course):
-                diff = (course.difficulty_level or "").lower()
-                if "beginner" in diff: return 1
-                if "intermediate" in diff: return 2
-                if "advanced" in diff: return 3
-                return 4
-                
-            potential_courses.sort(key=difficulty_score)
+        logger.info(f"[RECS] Matched {len(potential_courses)} courses: {[(c.id, c.title, c.category) for c in potential_courses]}")
 
-            for course in potential_courses[:5]:
-                recommendations.append({
-                    "course_id": course.id,
-                    "title": course.title,
-                    "topic": course.category,
-                    "difficulty": course.difficulty_level or "Beginner",
-                    "reason": f"Recommended because you are weak in {course.category}",
-                    "priority": "high"
-                })
+        # Sort by difficulty: beginner -> intermediate -> advanced
+        def difficulty_score(course):
+            diff = (course.difficulty_level or "").lower()
+            if "beginner" in diff: return 1
+            if "intermediate" in diff: return 2
+            if "advanced" in diff: return 3
+            return 4
+            
+        potential_courses.sort(key=difficulty_score)
+
+        for course in potential_courses[:5]:
+            recommendations.append({
+                "course_id": course.id,
+                "title": course.title,
+                "topic": course.category.strip(),
+                "difficulty": course.difficulty_level or "Beginner",
+                "reason": f"Recommended because you are weak in {course.category.strip()}",
+                "priority": "high",
+                "thumbnail_url": course.thumbnail_url,
+                "youtube_url": course.youtube_url
+            })
+
+        # FALLBACK MODE / API RESPONSE MUST NEVER BE EMPTY (REQUIRED):
+        # If no recommendations were found (no courses matched or all completed)
+        if not recommendations:
+            fallback_course = Course.query.first()
+            fallback_id = fallback_course.id if fallback_course else 999
+            
+            recommendations.append({
+                "course_id": fallback_id,
+                "title": fallback_course.title if fallback_course else "Start with Basics",
+                "topic": "Demo Topic" if not weak_topics else weak_topics[0],
+                "difficulty": "Beginner",
+                "reason": "No weak topics detected, continue learning",
+                "priority": "medium",
+                "thumbnail_url": fallback_course.thumbnail_url if fallback_course else None,
+                "youtube_url": fallback_course.youtube_url if fallback_course else None
+            })
+            if not weak_topics:
+                weak_topics = ["Demo"]
+            logger.info(f"[RECS] Fallback Mode active: Appended fallback recommendation pointing to course_id={fallback_id}")
+
+        # DEBUG LOGGING (REQUIRED)
+        print("Weak topics:", weak_topics)
+        print("Recommendations:", recommendations)
 
         overall_score_increase = len(weak_topics) * 5
         if overall_score_increase > 20: overall_score_increase = 20
+
+        logger.info(f"[RECS] Final recommendations count={len(recommendations)}")
+
+        insight_msg = f"If you improve your weak topics, your overall score can increase by {overall_score_increase}%"
+        if not weak_topics or "Demo Topic" in weak_topics or "Demo" in weak_topics:
+            insight_msg = "Keep learning! Here are some suggestions for you."
 
         return jsonify({
             "weak_topics": weak_topics,
             "strong_topics": strong_topics,
             "recommendations": recommendations,
-            "insight_message": f"If you improve your weak topics, your overall score can increase by {overall_score_increase}%" if weak_topics else "You're doing great! Keep it up."
+            "insight_message": insight_msg
         }), 200
+

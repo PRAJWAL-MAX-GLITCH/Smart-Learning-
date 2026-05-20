@@ -8,6 +8,7 @@ import Login from '../pages/Login';
 import Register from '../pages/Register';
 import CourseDetail from '../pages/CourseDetail';
 import Quiz from '../pages/Quiz';
+import QuizView from '../pages/QuizView';
 import Result from '../pages/Result';
 import Dashboard from '../pages/Dashboard';
 import LessonView from '../pages/LessonView';
@@ -36,6 +37,7 @@ const AppRoutes = () => {
             <Route path="/courses/:id" element={<ProtectedRoute allowedRoles={['student', 'admin']}><CourseDetail /></ProtectedRoute>} />
             <Route path="/courses/:courseId/lessons/:lessonId" element={<ProtectedRoute allowedRoles={['student', 'admin']}><LessonView /></ProtectedRoute>} />
             <Route path="/quiz/:id" element={<ProtectedRoute allowedRoles={['student', 'admin']}><Quiz /></ProtectedRoute>} />
+            <Route path="/ai-quiz/:id" element={<ProtectedRoute allowedRoles={['student', 'admin']}><QuizView /></ProtectedRoute>} />
             <Route path="/result/:id" element={<ProtectedRoute allowedRoles={['student', 'admin']}><Result /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['student', 'admin']}><Dashboard /></ProtectedRoute>} />
             <Route path="/certificate/:courseId" element={<ProtectedRoute allowedRoles={['student', 'admin']}><Certificate /></ProtectedRoute>} />

@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import analyticsService from '../services/analyticsService';
 import aiService from '../services/aiService';
+import mlService from '../services/mlService';
 import { useAuth } from '../context/AuthContext';
+import CourseCard from '../components/CourseCard';
 import { 
     Target, TrendingUp, Calendar, ArrowRight, Sparkles, BookOpen, Clock, 
     PlayCircle, Award, CheckCircle2, BarChart3, Activity, List, ChevronRight, 
-    Zap, Flame, History, Bell, RefreshCw
+    Zap, Flame, History, Bell, RefreshCw, BrainCircuit, AlertTriangle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
@@ -18,7 +20,9 @@ const Dashboard = () => {
     const [data, setData] = useState(null);
     const [aiInsights, setAiInsights] = useState([]);
     const [recommendationsData, setRecommendationsData] = useState(null);
+    const [predictionData, setPredictionData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [loadingPrediction, setLoadingPrediction] = useState(true);
     const [loadingRecs, setLoadingRecs] = useState(true);
 
     useEffect(() => {
@@ -33,7 +37,7 @@ const Dashboard = () => {
                 if (isMounted) {
                     setData(statsData);
                     setAiInsights(insights);
-                    setRecommendationsData(recs);
+                    setRecommendationsData(recs || { recommendations: [], insight_message: "Keep learning! Here are some suggestions for you." });
                 }
             } catch (err) {
                 console.error("Dashboard analytics failed:", err);
@@ -48,13 +52,36 @@ const Dashboard = () => {
         return () => { isMounted = false; };
     }, []);
 
+    useEffect(() => {
+        if (!user?.id) return;
+        let isMounted = true;
+        const fetchPrediction = async () => {
+            try {
+                setLoadingPrediction(true);
+                const pred = await mlService.getPrediction(user.id);
+                if (isMounted) {
+                    setPredictionData(pred);
+                }
+            } catch (err) {
+                console.error("Failed to fetch ML prediction:", err);
+            } finally {
+                if (isMounted) {
+                    setLoadingPrediction(false);
+                }
+            }
+        };
+        fetchPrediction();
+        return () => { isMounted = false; };
+    }, [user?.id]);
+
     const handleRefreshRecs = async () => {
         setLoadingRecs(true);
         try {
             const recs = await analyticsService.getRecommendations();
-            setRecommendationsData(recs);
+            setRecommendationsData(recs || { recommendations: [], insight_message: "Keep learning! Here are some suggestions for you." });
         } catch (err) {
             console.error("Failed to refresh recommendations", err);
+            setRecommendationsData({ recommendations: [], insight_message: "Keep learning! Here are some suggestions for you." });
         } finally {
             setLoadingRecs(false);
         }
@@ -171,37 +198,14 @@ const Dashboard = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             {continueLearning.length > 0 ? continueLearning.map(course => (
-                                <Link key={course.course_id} to={`/courses/${course.course_id}`} className="group block">
-                                    <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-gray-200/50 transition-all overflow-hidden h-full flex flex-col">
-                                        <div className="h-40 bg-gray-50 relative overflow-hidden">
-                                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-blue-900 opacity-90 group-hover:scale-110 transition-transform duration-700"></div>
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <PlayCircle size={48} className="text-white/40 group-hover:scale-110 group-hover:text-white transition-all" />
-                                            </div>
-                                            <div className="absolute bottom-4 left-6">
-                                                <span className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-lg border border-white/10">
-                                                    {course.category}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="p-8 flex-1 flex flex-col">
-                                            <h3 className="text-xl font-black text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">{course.course_title}</h3>
-                                            <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">
-                                                <History size={14} className="text-blue-500" />
-                                                <span className="truncate">Resume: {course.last_lesson}</span>
-                                            </div>
-                                            <div className="mt-auto">
-                                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-3">
-                                                    <span className="text-gray-400">Progress</span>
-                                                    <span className="text-blue-600">{course.progress}%</span>
-                                                </div>
-                                                <div className="h-2 bg-gray-50 rounded-full overflow-hidden border border-gray-100">
-                                                    <div className="h-full bg-blue-600 rounded-full transition-all duration-1000" style={{ width: `${course.progress}%` }} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
+                                <CourseCard 
+                                    key={course.course_id}
+                                    course={course}
+                                    title={course.course_title}
+                                    category={course.category}
+                                    progress={course.progress}
+                                    difficulty="Intermediate"
+                                />
                             )) : (
                                 <div className="col-span-full py-16 bg-gray-50 rounded-[3rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center">
                                     <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-4">
@@ -245,39 +249,30 @@ const Dashboard = () => {
                                 ) : recommendationsData?.recommendations?.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {recommendationsData.recommendations.map(rec => (
-                                            <Link key={rec.course_id} to={`/courses/${rec.course_id}`} className="group block">
-                                                <div className="bg-white p-8 rounded-[2.5rem] border border-blue-100/50 shadow-sm hover:shadow-xl hover:shadow-blue-900/10 transition-all h-full flex flex-col relative overflow-hidden">
-                                                    <div className="absolute -right-4 -top-4 bg-blue-50 h-24 w-24 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                                    <div className="flex justify-between items-start mb-6 relative z-10">
-                                                        <div className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-indigo-100">
-                                                            {rec.topic}
-                                                        </div>
-                                                        <div className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${
-                                                            rec.difficulty.toLowerCase().includes('beginner') ? 'text-emerald-600 bg-emerald-50' :
-                                                            rec.difficulty.toLowerCase().includes('advanced') ? 'text-red-600 bg-red-50' :
-                                                            'text-amber-600 bg-amber-50'
-                                                        }`}>
-                                                            {rec.difficulty}
-                                                        </div>
-                                                    </div>
-                                                    <h3 className="text-xl font-black text-gray-900 mb-4 group-hover:text-blue-600 transition-colors relative z-10">{rec.title}</h3>
-                                                    <div className="mt-auto bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50 flex items-start gap-3 relative z-10">
-                                                        <Activity className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                                                        <p className="text-xs font-bold text-gray-600 leading-relaxed">{rec.reason}</p>
-                                                    </div>
-                                                </div>
-                                            </Link>
+                                            <CourseCard 
+                                                key={rec.course_id}
+                                                course={rec}
+                                                title={rec.title}
+                                                category={rec.topic}
+                                                difficulty={rec.difficulty}
+                                                isRecommended={true}
+                                            />
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="bg-white/50 rounded-[2.5rem] p-12 text-center border-2 border-dashed border-blue-100/50">
-                                        <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                            <Award className="text-emerald-500 h-8 w-8" />
-                                        </div>
-                                        <h3 className="text-lg font-black text-gray-900 mb-2">You're up to date!</h3>
-                                        <p className="text-sm font-bold text-gray-500">
-                                            Complete more quizzes or start new topics to get personalized course recommendations.
-                                        </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <CourseCard 
+                                            title="Explore New Courses"
+                                            category="General"
+                                            difficulty="Beginner"
+                                            thumbnail="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop"
+                                        />
+                                        <CourseCard 
+                                            title="Continue Learning"
+                                            category="General"
+                                            difficulty="Intermediate"
+                                            thumbnail="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop"
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -369,6 +364,66 @@ const Dashboard = () => {
                 {/* Sidebar - Activity & Showcase */}
                 <div className="lg:col-span-4 space-y-10">
                     
+                    {/* AI Prediction Section */}
+                    <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm overflow-hidden relative group">
+                        <div className="absolute -right-4 -top-4 bg-indigo-50 h-24 w-24 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
+                        <div className="relative z-10">
+                            <h3 className="text-lg font-black text-gray-900 flex items-center gap-2 mb-6">
+                                <BrainCircuit className="text-indigo-600 h-5 w-5" /> AI Quiz Prediction
+                            </h3>
+                            
+                            {loadingPrediction ? (
+                                <div className="flex flex-col items-center justify-center py-6 space-y-2">
+                                    <RefreshCw className="animate-spin text-indigo-600 h-6 w-6" />
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Calculating Prediction...</p>
+                                </div>
+                            ) : predictionData && predictionData.prediction ? (
+                                <div className={`p-6 rounded-2xl border transition-all ${
+                                    predictionData.prediction === 'Pass' 
+                                        ? 'bg-emerald-50/50 border-emerald-100 hover:border-emerald-200' 
+                                        : 'bg-red-50/50 border-red-100 hover:border-red-200'
+                                }`}>
+                                    <div className="flex items-start gap-4">
+                                        <div className={`p-3 rounded-xl ${
+                                            predictionData.prediction === 'Pass' 
+                                                ? 'bg-emerald-100 text-emerald-600' 
+                                                : 'bg-red-100 text-red-600'
+                                        }`}>
+                                            {predictionData.prediction === 'Pass' 
+                                                ? <CheckCircle2 size={20} /> 
+                                                : <AlertTriangle size={20} />
+                                            }
+                                        </div>
+                                        <div>
+                                            <div className="font-black text-gray-900 leading-snug">
+                                                {predictionData.prediction === 'Pass' 
+                                                    ? '✅ You are likely to pass the next quiz' 
+                                                    : '⚠️ You may struggle in the next quiz'
+                                                }
+                                            </div>
+                                            <div className="text-[11px] font-bold text-gray-500 mt-2">
+                                                Confidence: {(predictionData.confidence * 100).toFixed(0)}%
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-1 font-medium italic">
+                                                {predictionData.message}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100 text-center">
+                                    <AlertTriangle className="mx-auto text-gray-400 h-8 w-8 mb-2" />
+                                    <div className="text-xs font-black text-gray-500 uppercase tracking-widest">
+                                        Prediction not available
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 mt-1 font-medium">
+                                        Complete a few quizzes first so our AI model can evaluate your learning history!
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     {/* AI Insights - Rule Based Detection */}
                     <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm overflow-hidden relative group">
                         <div className="absolute -right-4 -top-4 bg-blue-50 h-24 w-24 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>

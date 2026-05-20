@@ -29,6 +29,8 @@ class CourseService:
             title=data["title"],
             description=data.get("description"),
             category=data.get("category"),
+            topic=data.get("topic"),
+            thumbnail_url=data.get("thumbnail_url"),
             youtube_url=data.get("youtube_url"),
             duration=data.get("duration"),
             total_lessons=data.get("total_lessons"),
@@ -42,7 +44,7 @@ class CourseService:
 
     @staticmethod
     def update_course(course, data):
-        for field in ["title", "description", "category", "youtube_url", "duration", "total_lessons", "difficulty_level"]:
+        for field in ["title", "description", "category", "topic", "thumbnail_url", "youtube_url", "duration", "total_lessons", "difficulty_level"]:
             if field in data:
                 setattr(course, field, data[field])
         db.session.commit()
