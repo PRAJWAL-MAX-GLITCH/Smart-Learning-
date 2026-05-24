@@ -12,6 +12,18 @@ const aiService = {
     getAiQuiz: async (courseId) => {
         const response = await api.get(`/ai/quiz/${courseId}`);
         return response.data;
+    },
+    sendChatMessage: async (message) => {
+        const response = await api.post('/ai/chat', { message });
+        return response.data;
+    },
+    getChatHistory: async () => {
+        const response = await api.get('/ai/chat/history');
+        return response.data;
+    },
+    clearChatHistory: async () => {
+        const response = await api.post('/ai/chat/clear');
+        return response.data;
     }
 };
 

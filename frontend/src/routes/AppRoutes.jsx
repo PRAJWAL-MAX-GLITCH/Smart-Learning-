@@ -14,6 +14,7 @@ import Dashboard from '../pages/Dashboard';
 import LessonView from '../pages/LessonView';
 import Certificate from '../pages/Certificate';
 import VerifyCertificate from '../pages/VerifyCertificate';
+import Chatbot from '../pages/Chatbot';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -40,6 +41,7 @@ const AppRoutes = () => {
             <Route path="/ai-quiz/:id" element={<ProtectedRoute allowedRoles={['student', 'admin']}><QuizView /></ProtectedRoute>} />
             <Route path="/result/:id" element={<ProtectedRoute allowedRoles={['student', 'admin']}><Result /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['student', 'admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/chatbot" element={<ProtectedRoute allowedRoles={['student', 'admin']}><Chatbot /></ProtectedRoute>} />
             <Route path="/certificate/:courseId" element={<ProtectedRoute allowedRoles={['student', 'admin']}><Certificate /></ProtectedRoute>} />
 
             {/* Public Verification Route */}

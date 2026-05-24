@@ -116,6 +116,7 @@ def register_blueprints(app):
     from app.models.progress import UserCourseProgress 
     from app.models.settings import SystemSettings
     from app.models.premium_models import Lesson, UserLessonProgress, Note, Certificate, Notification
+    from app.models.chat import ChatMessage
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(users_bp, url_prefix="/api/users")

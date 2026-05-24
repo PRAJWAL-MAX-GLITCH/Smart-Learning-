@@ -96,3 +96,46 @@ class AIController:
         return jsonify({
             "questions": [q.to_dict(include_answer=False) for q in questions]
         }), 200
+
+    @staticmethod
+    def chat():
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        if not data or "message" not in data or not data["message"].strip():
+            return jsonify({"error": "message is required"}), 400
+
+        message = data["message"].strip()
+        reply, error = AIService.get_chat_response(user_id, message)
+        
+        if error:
+            return jsonify({"error": error}), 500
+            
+        return jsonify({"reply": reply}), 200
+
+    @staticmethod
+    def get_chat_history():
+        from app.models.chat import ChatMessage
+        user_id = get_jwt_identity()
+        try:
+            # Retrieve history ordered chronologically
+            messages = ChatMessage.query.filter_by(user_id=user_id).order_by(ChatMessage.created_at.asc()).all()
+            return jsonify({
+                "history": [msg.to_dict() for msg in messages]
+            }), 200
+        except Exception as e:
+            logger.error(f"Failed to fetch chat history for user {user_id}: {e}")
+            return jsonify({"error": "Failed to load chat history"}), 500
+
+    @staticmethod
+    def clear_chat():
+        from app.models.chat import ChatMessage
+        user_id = get_jwt_identity()
+        try:
+            ChatMessage.query.filter_by(user_id=user_id).delete()
+            db.session.commit()
+            return jsonify({"message": "Chat history cleared"}), 200
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to clear chat history for user {user_id}: {e}")
+            return jsonify({"error": "Failed to clear chat history"}), 500
+

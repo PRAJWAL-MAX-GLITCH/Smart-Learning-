@@ -237,3 +237,148 @@ class AIService:
                 mock_quiz.append(new_q)
                 
         return mock_quiz
+
+    @staticmethod
+    def get_chat_response(user_id, message):
+        """
+        Retrieves the chat response for the given message using gemini-2.5-flash.
+        Keeps answers under 150-200 words.
+        Stores user prompt and assistant response in the database.
+        """
+        from app.models.chat import ChatMessage
+        
+        # 1. Fetch all previous messages for this user (unlimited history context)
+        try:
+            previous_messages = ChatMessage.query.filter_by(user_id=user_id).order_by(ChatMessage.created_at.asc()).all()
+        except Exception as e:
+            logger.error(f"Failed to fetch chat messages: {e}")
+            previous_messages = []
+
+        # 2. Format history for Gemini
+        # Gemini API format: {'role': 'user'|'model', 'parts': [content]}
+        formatted_history = []
+        for msg in previous_messages:
+            role = "user" if msg.role == "user" else "model"
+            formatted_history.append({
+                "role": role,
+                "parts": [msg.content]
+            })
+
+        # 3. Check for API key
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key or api_key == "dummy_key_for_testing" or api_key.strip() == "":
+            logger.info("No valid Gemini API key found. Using Mock AI Response.")
+            reply = AIService._get_mock_chat_response(message)
+            
+            # Save user message & assistant reply to DB
+            try:
+                user_msg = ChatMessage(user_id=user_id, role="user", content=message)
+                assistant_msg = ChatMessage(user_id=user_id, role="assistant", content=reply)
+                db.session.add(user_msg)
+                db.session.add(assistant_msg)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Failed to save mock chat messages to DB: {e}")
+                
+            return reply, None
+
+        # 4. Initialize Gemini Model and Chat
+        try:
+            genai.configure(api_key=api_key)
+            
+            system_instruction = """You are an AI learning assistant for students.
+
+Your role:
+* Explain concepts in very simple language
+* Support students from school level (10th–12th) to beginner learners
+* Break down complex topics step-by-step
+* Use examples and analogies
+* Be friendly and encouraging
+
+Subjects:
+* Mathematics
+* Science (Physics, Chemistry)
+* Programming
+* General studies
+
+Rules:
+* Avoid complex jargon unless user asks
+* If user is confused, simplify further
+* Keep answers clear and structured
+* Keep answers under 150–200 words unless needed."""
+
+            model = genai.GenerativeModel(
+                model_name='gemini-2.5-flash',
+                system_instruction=system_instruction
+            )
+            
+            chat = model.start_chat(history=formatted_history)
+            response = chat.send_message(message)
+            reply = response.text.strip()
+
+            # Save user message & assistant reply to DB
+            try:
+                user_msg = ChatMessage(user_id=user_id, role="user", content=message)
+                assistant_msg = ChatMessage(user_id=user_id, role="assistant", content=reply)
+                db.session.add(user_msg)
+                db.session.add(assistant_msg)
+                db.session.commit()
+            except Exception as db_err:
+                db.session.rollback()
+                logger.error(f"Failed to save real chat messages to DB: {db_err}")
+
+            return reply, None
+
+        except Exception as e:
+            logger.error(f"Gemini API Error: {e}")
+            # Try to save the user message to keep the history consistent
+            try:
+                user_msg = ChatMessage(user_id=user_id, role="user", content=message)
+                db.session.add(user_msg)
+                db.session.commit()
+            except Exception as db_err:
+                db.session.rollback()
+                logger.error(f"Failed to save user message to DB on failure: {db_err}")
+                
+            return "Sorry, I couldn't understand that. Try asking in a simpler way.", None
+
+    @staticmethod
+    def _get_mock_chat_response(message):
+        """
+        Generate mock responses for test queries when GEMINI_API_KEY is not set.
+        """
+        msg_lower = message.lower()
+        if "pythagoras" in msg_lower:
+            return (
+                "The Pythagoras theorem is a simple math rule for right-angled triangles (triangles with one 90-degree corner).\n\n"
+                "It states that: a² + b² = c²\n\n"
+                "Where 'a' and 'b' are the two shorter sides, and 'c' is the longest side (called the hypotenuse).\n\n"
+                "Example: If one side is 3cm and the other is 4cm, the longest side will be 5cm because 3² (9) + 4² (16) = 5² (25)."
+            )
+        elif "photosynthesis" in msg_lower:
+            return (
+                "Photosynthesis is how plants make their own food using sunlight!\n\n"
+                "Here is how it works step-by-step:\n"
+                "1. Plants absorb carbon dioxide from the air and water from the soil.\n"
+                "2. Green leaves contain chlorophyll, which captures sunlight.\n"
+                "3. Sunlight turns water and carbon dioxide into glucose (food) and oxygen.\n"
+                "4. The plant releases oxygen into the air for us to breathe!"
+            )
+        elif "binary tree" in msg_lower:
+            return (
+                "A binary tree is a data structure in programming that looks like an upside-down family tree.\n\n"
+                "1. It starts with a single top item called the **Root**.\n"
+                "2. Each item (called a **Node**) can connect to at most **two** other items below it (a left child and a right child).\n"
+                "3. It is used to organize data so it can be searched very quickly, just like looking up a word in a sorted dictionary."
+            )
+        elif "newton" in msg_lower:
+            return (
+                "Sir Isaac Newton proposed three laws of motion that explain how things move:\n\n"
+                "1. **First Law (Inertia)**: An object will keep doing what it's doing (resting or moving) unless a force pushes it.\n"
+                "2. **Second Law (F = ma)**: Pushing an object harder makes it speed up faster. A heavier object needs more push to speed up.\n"
+                "3. **Third Law (Action & Reaction)**: For every action, there is an equal and opposite reaction. For example, balloon air going down pushes the balloon up!"
+            )
+        else:
+            return f"[AI Mock Learning Assistant] You asked: '{message}'. This is a simplified explanation to help you learn! To enable live Gemini responses, please configure a valid GEMINI_API_KEY."
+

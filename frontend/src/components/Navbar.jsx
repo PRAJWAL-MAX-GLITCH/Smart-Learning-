@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, LogOut, LayoutDashboard, User, Search, Bell, Menu, Check, Trash2, Clock } from 'lucide-react';
+import { BookOpen, LogOut, LayoutDashboard, User, Search, Bell, Menu, Check, Trash2, Clock, MessageSquare } from 'lucide-react';
 import notificationService from '../services/notificationService';
 import toast from 'react-hot-toast';
 
@@ -180,10 +180,16 @@ const Navbar = () => {
                                         Admin Panel
                                     </Link>
                                 ) : (
-                                    <Link to="/dashboard" className="hidden sm:flex items-center space-x-2 text-gray-900 hover:text-blue-600 transition-colors">
-                                        <LayoutDashboard className="h-4 w-4" />
-                                        <span className="text-xs font-black uppercase tracking-widest">Dashboard</span>
-                                    </Link>
+                                    <>
+                                        <Link to="/dashboard" className="hidden sm:flex items-center space-x-2 text-gray-900 hover:text-blue-600 transition-colors">
+                                            <LayoutDashboard className="h-4 w-4" />
+                                            <span className="text-xs font-black uppercase tracking-widest">Dashboard</span>
+                                        </Link>
+                                        <Link to="/chatbot" className="hidden sm:flex items-center space-x-2 text-gray-900 hover:text-blue-600 transition-colors">
+                                            <MessageSquare className="h-4 w-4 text-blue-600" />
+                                            <span className="text-xs font-black uppercase tracking-widest">AI Chatbot</span>
+                                        </Link>
+                                    </>
                                 )}
                                 
                                 {/* User Profile */}

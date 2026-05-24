@@ -18,3 +18,19 @@ def generate_quiz():
 @jwt_required()
 def get_ai_quiz(course_id):
     return AIController.get_ai_quiz(course_id)
+
+@ai_bp.route("/chat", methods=["POST"])
+@jwt_required()
+def chat():
+    return AIController.chat()
+
+@ai_bp.route("/chat/history", methods=["GET"])
+@jwt_required()
+def get_chat_history():
+    return AIController.get_chat_history()
+
+@ai_bp.route("/chat/clear", methods=["POST"])
+@jwt_required()
+def clear_chat():
+    return AIController.clear_chat()
+

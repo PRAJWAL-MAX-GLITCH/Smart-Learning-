@@ -8,7 +8,7 @@ import CourseCard from '../components/CourseCard';
 import { 
     Target, TrendingUp, Calendar, ArrowRight, Sparkles, BookOpen, Clock, 
     PlayCircle, Award, CheckCircle2, BarChart3, Activity, List, ChevronRight, 
-    Zap, Flame, History, Bell, RefreshCw, BrainCircuit, AlertTriangle
+    Zap, Flame, History, Bell, RefreshCw, BrainCircuit, AlertTriangle, MessageSquare
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
@@ -421,6 +421,25 @@ const Dashboard = () => {
                                     </p>
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* AI Learning Assistant Quick Access */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-[2.5rem] p-8 border border-blue-100 shadow-sm relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 bg-blue-100/50 h-20 w-20 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
+                        <div className="relative z-10">
+                            <h3 className="text-lg font-black text-gray-900 flex items-center gap-2 mb-2">
+                                <Sparkles className="text-blue-600 h-5 w-5" /> AI Chatbot
+                            </h3>
+                            <p className="text-xs text-gray-500 font-bold leading-relaxed mb-6">
+                                Need help with Mathematics, Science, or Coding? Chat with our AI tutor for simple, step-by-step explanations!
+                            </p>
+                            <Link 
+                                to="/chatbot" 
+                                className="w-full py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+                            >
+                                <MessageSquare size={14} /> Open AI Assistant
+                            </Link>
                         </div>
                     </div>
 
