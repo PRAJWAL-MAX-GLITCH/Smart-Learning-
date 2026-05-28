@@ -34,3 +34,18 @@ def get_chat_history():
 def clear_chat():
     return AIController.clear_chat()
 
+
+@ai_bp.route("/roadmap/<int:user_id>", methods=["GET"])
+@jwt_required()
+def get_roadmap(user_id):
+    return AIController.get_roadmap(user_id)
+
+@ai_bp.route("/roadmap/task", methods=["POST"])
+@jwt_required()
+def update_task_status():
+    return AIController.update_task_status()
+
+@ai_bp.route("/roadmap/regenerate", methods=["POST"])
+@jwt_required()
+def regenerate_roadmap():
+    return AIController.regenerate_roadmap()

@@ -130,6 +130,18 @@ const AdminDashboard = () => {
                             <InsightRow label="Most Popular Course" value={stats.insights?.popular_course || "N/A"} />
                             <InsightRow label="Platform Pass Rate" value={`${stats.avg_platform_score}%`} />
                             
+                            {stats.level_distribution && (
+                                <div className="pt-6 border-t border-white/10 mt-6">
+                                    <h4 className="text-xs font-black text-blue-300 uppercase tracking-widest mb-4">Learner Demographics</h4>
+                                    <div className="space-y-3">
+                                        <InsightRow label="School Student" value={stats.level_distribution["School Student"] || 0} />
+                                        <InsightRow label="Beginner" value={stats.level_distribution["Beginner"] || 0} />
+                                        <InsightRow label="Intermediate" value={stats.level_distribution["Intermediate"] || 0} />
+                                        <InsightRow label="Advanced" value={stats.level_distribution["Advanced"] || 0} />
+                                    </div>
+                                </div>
+                            )}
+                            
                             <div className="pt-6 border-t border-white/10 mt-6">
                                 <p className="text-sm text-blue-200 leading-relaxed font-medium">
                                     {stats.total_courses < 3 

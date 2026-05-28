@@ -145,21 +145,28 @@ const Dashboard = () => {
                     <p className="text-gray-500 mt-2 font-medium">Ready to continue your learning journey today?</p>
                 </div>
                 
-                {/* Learning Streak Badge */}
+                {/* Learning Level Badge */}
                 <div className="flex items-center gap-4">
+                    <div className="bg-blue-50 px-6 py-4 rounded-[2rem] border border-blue-100 flex items-center gap-4 shadow-sm group hover:shadow-blue-200/50 transition-all cursor-default">
+                        <div className="h-12 w-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
+                            <BrainCircuit className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Detected Learning Level</div>
+                            <div className="text-xl font-black text-blue-900">{stats.learning_level || "Beginner"}</div>
+                        </div>
+                    </div>
+
+                {/* Learning Streak Badge */}
                     <div className="bg-orange-50 px-6 py-4 rounded-[2rem] border border-orange-100 flex items-center gap-4 shadow-sm group hover:shadow-orange-200/50 transition-all cursor-default">
                         <div className="h-12 w-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform">
                             <Flame className="h-6 w-6 text-white fill-white" />
                         </div>
                         <div>
                             <div className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Current Streak</div>
-                            <div className="text-2xl font-black text-orange-600">{stats.streak} Days</div>
+                            <div className="text-xl font-black text-orange-600">{stats.streak} Days</div>
                         </div>
                     </div>
-                    <button className="p-4 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm hover:bg-gray-50 transition-colors relative">
-                        <Bell className="h-6 w-6 text-gray-400" />
-                        <span className="absolute top-4 right-4 h-2 w-2 bg-red-500 rounded-full border-2 border-white"></span>
-                    </button>
                 </div>
             </div>
 

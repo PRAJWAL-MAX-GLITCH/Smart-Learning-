@@ -9,14 +9,6 @@ from app.extensions import db
 
 logger = logging.getLogger(__name__)
 
-FALLBACK_TRANSCRIPT = """
-Welcome to this course on coding basics. Today we will cover some fundamental concepts.
-Variables are used to store data. In Python, you can declare a variable simply by assigning a value to a name, like x = 10.
-Functions are blocks of reusable code. You define them using the 'def' keyword.
-Lists are used to store multiple items in a single variable. They are created using square brackets.
-A loop allows you to run a block of code multiple times. For example, a 'for' loop iterates over a sequence.
-Conditional statements like 'if', 'elif', and 'else' allow your code to make decisions based on certain conditions.
-"""
 
 def extract_video_id(url):
     """Extract YouTube video ID from URL"""
@@ -34,15 +26,15 @@ def extract_video_id(url):
 
 class AIService:
     @staticmethod
-    def get_or_extract_transcript(course_id, youtube_url=None):
+    def get_or_extract_transcript(course, youtube_url=None):
         """
         Gets transcript from DB cache or fetches via youtube-transcript-api.
         Uses fallback if everything fails.
         """
         # 1. Check DB Cache
-        transcript_record = CourseTranscript.query.filter_by(course_id=course_id).first()
+        transcript_record = CourseTranscript.query.filter_by(course_id=course.id).first()
         if transcript_record:
-            logger.info(f"Using cached transcript for course_id: {course_id}")
+            logger.info(f"Using cached transcript for course_id: {course.id}")
             return transcript_record.transcript_text
 
         # 2. Extract from YouTube
@@ -61,12 +53,12 @@ class AIService:
 
         # 3. Fallback Mechanism (Mandatory)
         if not transcript_text or len(transcript_text.strip()) < 50:
-            logger.info("Using Fallback Dummy Transcript.")
-            transcript_text = FALLBACK_TRANSCRIPT
+            logger.info(f"Using Fallback Context for course: {course.title}")
+            transcript_text = f"Course Title: {course.title}\nCategory: {course.category or 'General'}\nDescription: {course.description or 'A comprehensive educational course.'}\n\nPlease base the quiz on these general topics instead of a transcript since none was available."
 
         # 4. Save to DB Cache
         try:
-            new_record = CourseTranscript(course_id=course_id, transcript_text=transcript_text)
+            new_record = CourseTranscript(course_id=course.id, transcript_text=transcript_text)
             db.session.add(new_record)
             db.session.commit()
         except Exception as e:
@@ -246,6 +238,7 @@ class AIService:
         Stores user prompt and assistant response in the database.
         """
         from app.models.chat import ChatMessage
+        from app.services.student_level_service import StudentLevelService
         
         # 1. Fetch all previous messages for this user (unlimited history context)
         try:
@@ -287,26 +280,33 @@ class AIService:
         try:
             genai.configure(api_key=api_key)
             
-            system_instruction = """You are an AI learning assistant for students.
+            # Predict student level and get dynamic style
+            student_level = StudentLevelService.get_student_level(user_id)
+            
+            style_instruction = "Be helpful."
+            if student_level == "School Student":
+                style_instruction = "Use very simple language, real-life examples, and a friendly tone."
+            elif student_level == "Beginner":
+                style_instruction = "Provide step-by-step explanations and simple terminology."
+            elif student_level == "Intermediate":
+                style_instruction = "Provide more technical depth and structured explanations."
+            elif student_level == "Advanced":
+                style_instruction = "Provide concise and detailed explanations. Advanced concepts are allowed."
+                
+            logger.info(f"Detected Level for Chat: {student_level}")
+
+            system_instruction = f"""You are an adaptive AI learning assistant.
 
 Your role:
-* Explain concepts in very simple language
-* Support students from school level (10th–12th) to beginner learners
-* Break down complex topics step-by-step
+* Explain concepts based on student level
+* Simplify difficult topics
 * Use examples and analogies
-* Be friendly and encouraging
+* Encourage students positively
 
-Subjects:
-* Mathematics
-* Science (Physics, Chemistry)
-* Programming
-* General studies
+Student Level: {student_level}
+Explanation Style: {style_instruction}
 
-Rules:
-* Avoid complex jargon unless user asks
-* If user is confused, simplify further
-* Keep answers clear and structured
-* Keep answers under 150–200 words unless needed."""
+Keep answers under 200 words unless deeper explanation is requested."""
 
             model = genai.GenerativeModel(
                 model_name='gemini-2.5-flash',

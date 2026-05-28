@@ -33,7 +33,7 @@ class AIController:
             return jsonify({"error": "Course not found"}), 404
 
         # 1. Get Transcript
-        transcript_text = AIService.get_or_extract_transcript(course_id, course.youtube_url)
+        transcript_text = AIService.get_or_extract_transcript(course, course.youtube_url)
         
         if not transcript_text:
             return jsonify({"error": "Could not extract or fallback transcript"}), 500
@@ -138,4 +138,71 @@ class AIController:
             db.session.rollback()
             logger.error(f"Failed to clear chat history for user {user_id}: {e}")
             return jsonify({"error": "Failed to clear chat history"}), 500
+
+    @staticmethod
+    def get_roadmap(user_id):
+        from app.services.roadmap_service import RoadmapService
+        from app.models.user import User
+        
+        # Verify user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+            
+        try:
+            data = RoadmapService.generate_roadmap(user_id)
+            return jsonify(data), 200
+        except Exception as e:
+            logger.error(f"Failed to get study roadmap for user {user_id}: {e}")
+            return jsonify({"error": "Failed to load study roadmap"}), 500
+
+    @staticmethod
+    def update_task_status():
+        from app.services.roadmap_service import RoadmapService
+        user_id = get_jwt_identity()
+        
+        data = request.get_json()
+        if not data or "task_key" not in data or "completed" not in data:
+            return jsonify({"error": "task_key and completed status are required"}), 400
+            
+        task_key = data["task_key"]
+        completed = bool(data["completed"])
+        
+        try:
+            success = RoadmapService.toggle_task(user_id, task_key, completed)
+            if success:
+                return jsonify({"message": "Task status updated successfully"}), 200
+            else:
+                return jsonify({"error": "Failed to update task status"}), 500
+        except Exception as e:
+            logger.error(f"Failed to update task {task_key} for user {user_id}: {e}")
+            return jsonify({"error": "Failed to update task status"}), 500
+
+    @staticmethod
+    def regenerate_roadmap():
+        from app.services.roadmap_service import RoadmapService
+        from app.models.roadmap import UserRoadmap
+        from datetime import datetime, timedelta
+        
+        user_id = get_jwt_identity()
+        
+        # Cooldown check: 24 hour limit
+        cached = UserRoadmap.query.filter_by(user_id=user_id).first()
+        if cached:
+            cooldown_limit = datetime.utcnow() - timedelta(hours=24)
+            if cached.generated_at > cooldown_limit:
+                time_elapsed = datetime.utcnow() - cached.generated_at
+                hours_remaining = max(1, 24 - int(time_elapsed.total_seconds() / 3600))
+                return jsonify({
+                    "error": "Cooldown active",
+                    "message": f"You can only regenerate your roadmap once every 24 hours. Please wait {hours_remaining} more hours."
+                }), 400
+                
+        try:
+            data = RoadmapService.generate_roadmap(user_id, force_regenerate=True)
+            return jsonify(data), 200
+        except Exception as e:
+            logger.error(f"Failed to regenerate study roadmap for user {user_id}: {e}")
+            return jsonify({"error": "Failed to regenerate study roadmap"}), 500
+
 

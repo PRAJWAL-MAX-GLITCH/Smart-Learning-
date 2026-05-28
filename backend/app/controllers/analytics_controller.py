@@ -13,6 +13,10 @@ class AnalyticsController:
     @staticmethod
     def get_student_dashboard_stats():
         user_id = get_jwt_identity()
+        from app.services.student_level_service import StudentLevelService
+        
+        student_level = StudentLevelService.get_student_level(user_id)
+
         
         # 1. Basic Stats
         total_courses_enrolled = UserCourseProgress.query.filter_by(user_id=user_id).count()
@@ -147,7 +151,8 @@ class AnalyticsController:
                 "completed": completed_courses,
                 "lessons_done": total_lessons_completed,
                 "avg_score": round(float(avg_score), 1),
-                "streak": streak
+                "streak": streak,
+                "learning_level": student_level
             },
             "weekly_activity": weekly_stats,
             "continue_learning": continue_learning,
@@ -162,6 +167,16 @@ class AnalyticsController:
         total_courses = Course.query.count()
         total_results = Result.query.count()
         avg_score = db.session.query(func.avg(Result.score)).scalar() or 0
+        
+        from app.services.student_level_service import StudentLevelService
+        students = User.query.filter_by(role='student').all()
+        level_distribution = {"Beginner": 0, "Intermediate": 0, "Advanced": 0, "School Student": 0}
+        for s in students:
+            level = StudentLevelService.get_student_level(s.id)
+            if level in level_distribution:
+                level_distribution[level] += 1
+            else:
+                level_distribution[level] = 1
         
         # 2. Most Popular Course (based on enrollments)
         popular_course_id = db.session.query(
@@ -192,6 +207,7 @@ class AnalyticsController:
             "total_courses": total_courses,
             "total_results": total_results,
             "avg_platform_score": round(float(avg_score), 1),
+            "level_distribution": level_distribution,
             "insights": {
                 "popular_course": popular_course_name,
                 "engagement": "High" if total_results > 10 else "Moderate"
