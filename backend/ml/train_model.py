@@ -6,9 +6,6 @@ from sklearn.metrics import accuracy_score, classification_report
 import joblib
 import os
 
-# -----------------------------------------------
-# STEP 1: Generate Synthetic Dataset
-# -----------------------------------------------
 def generate_synthetic_data(num_rows=200):
     np.random.seed(42)
 

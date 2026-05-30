@@ -18,6 +18,14 @@ def login():
 def verify_2fa():
     return AuthController.verify_2fa()
 
+@auth_bp.route("/verify-otp", methods=["POST"])
+def verify_otp():
+    return AuthController.verify_otp()
+
+@auth_bp.route("/resend-otp", methods=["POST"])
+def resend_otp():
+    return AuthController.resend_otp()
+
 
 @auth_bp.route("/admin-login", methods=["POST"])
 def admin_login():

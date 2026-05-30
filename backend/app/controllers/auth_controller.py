@@ -56,21 +56,26 @@ class AuthController:
         if error:
             return jsonify({"error": error}), 401
 
-        # Check 2FA Policy (Only for Admin in this mock)
-        is_2fa_enabled = SystemSettings.get_value("enable_2fa", "false") == "true"
-        
-        if user.role == 'student' and is_2fa_enabled:
-            # Mock: Generate a temporary session and ask for OTP
-            return jsonify({
-                "message": "2FA required",
-                "2fa_required": True,
-                "email": user.email,
-                "temp_token": create_access_token(identity=str(user.id), additional_claims={"2fa_pending": True}, expires_delta=False)
-            }), 200
+        # For students, initiate OTP flow
+        if user.role == "student":
+            from app.services.otp_service import generate_otp, save_otp, send_email_otp
+            otp_code = generate_otp()
+            save_otp(user.id, otp_code)
+            # Send email (fire-and-forget, ignore errors for now)
+            try:
+                send_email_otp(user.email, otp_code)
+            except Exception as e:
+                # Log but still proceed
+                from app.extensions import db
+                db.session.rollback()
+                return jsonify({"error": f"Failed to send OTP email: {str(e)}"}), 500
 
+            return jsonify({"status": "OTP_REQUIRED", "user_id": user.id}), 200
+
+        # Admins / others get token directly
         access_token = create_access_token(
             identity=str(user.id),
-            additional_claims={"role": user.role}
+            additional_claims={"role": user.role, "email_verified": True}
         )
         return jsonify({
             "message": "Login successful",
@@ -78,6 +83,65 @@ class AuthController:
             "role": user.role,
             "user": user.to_dict(),
         }), 200
+
+    @staticmethod
+    def verify_otp():
+        data = request.get_json()
+        print(f"[DEBUG] verify_otp called with data: {data}")
+        user_id = data.get("user_id")
+        otp = data.get("otp")
+        if not user_id or not otp:
+            return jsonify({"error": "user_id and otp are required"}), 400
+        
+        try:
+            user_id = int(user_id)
+            otp = str(otp).strip().replace(" ", "")
+        except ValueError:
+            return jsonify({"error": "Invalid input format"}), 400
+
+        print(f"[DEBUG] verify_otp parsing: user_id={user_id}, otp={otp}")
+
+        from app.services.otp_service import verify_otp
+        success, error = verify_otp(user_id, otp)
+        
+        print(f"[DEBUG] verify_otp result: success={success}, error={error}")
+
+        if not success:
+            return jsonify({"error": error}), 401
+        
+        # Generate JWT with verified flag
+        from app.models.user import User
+        user = User.query.get(user_id)
+        access_token = create_access_token(
+            identity=str(user.id),
+            additional_claims={"role": user.role, "email_verified": True}
+        )
+        # Update user email_verified flag
+        user.email_verified = True
+        from app.extensions import db
+        db.session.commit()
+        return jsonify({"message": "OTP verified, login successful", "token": access_token, "user": user.to_dict(), "role": user.role}), 200
+
+    @staticmethod
+    def resend_otp():
+        data = request.get_json()
+        user_id = data.get("user_id")
+        if not user_id:
+            return jsonify({"error": "user_id is required"}), 400
+        from app.services.otp_service import can_resend, generate_otp, invalidate_old_otps, save_otp, send_email_otp, get_user_email
+        if not can_resend(user_id):
+            return jsonify({"error": "Resend cooldown active. Please wait before requesting a new OTP."}), 429
+        # Invalidate old OTPs
+        invalidate_old_otps(user_id)
+        otp_code = generate_otp()
+        save_otp(user_id, otp_code)
+        email = get_user_email(user_id)
+        try:
+            send_email_otp(email, otp_code)
+        except Exception as e:
+            return jsonify({"error": f"Failed to send OTP email: {str(e)}"}), 500
+        return jsonify({"status": "OTP_SENT"}), 200
+
 
     @staticmethod
     def verify_2fa():

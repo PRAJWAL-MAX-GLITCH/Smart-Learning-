@@ -30,6 +30,12 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         const data = await authService.login(email, password);
+        
+        if (data.status === 'OTP_REQUIRED') {
+            console.log("AuthContext: OTP required, skipping auth state update");
+            return data;
+        }
+
         console.log("AuthContext: login success, updating state", data.role);
         setAuthState({
             user: data.user,

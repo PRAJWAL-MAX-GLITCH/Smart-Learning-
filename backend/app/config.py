@@ -14,6 +14,12 @@ class Config:
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-jwt-secret")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=2)
 
+    # SMTP Configuration
+    SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+    SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
+    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

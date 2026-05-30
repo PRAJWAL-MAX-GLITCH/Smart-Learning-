@@ -24,16 +24,26 @@ class CertificateController:
 
         # Verify completion (all lessons done)
         total_lessons = Lesson.query.filter_by(course_id=course_id).count()
+        if total_lessons == 0:
+            return jsonify({"error": "Course has no content yet."}), 400
+
         completed_lessons = UserLessonProgress.query.filter_by(
             user_id=user_id, course_id=course_id, completed=True
         ).count()
 
         if completed_lessons < total_lessons:
-            return jsonify({"error": "Course not fully completed"}), 400
+            return jsonify({"error": "You must watch all video lessons first."}), 400
 
-        # Get best quiz score
+        # Get best quiz score - Must have taken at least one quiz
         best_result = Result.query.filter_by(user_id=user_id, course_id=course_id).order_by(Result.score.desc()).first()
-        score = best_result.score if best_result else 0
+        if not best_result:
+            return jsonify({"error": "You must pass a quiz before getting your certificate."}), 400
+        
+        # Optional: enforce passing score
+        if best_result.score < 50:
+            return jsonify({"error": f"Your highest score is {best_result.score}%. You need at least 50% to pass."}), 400
+
+        score = best_result.score
 
         # Issue new certificate
         cert_id = str(uuid.uuid4())[:18].upper()

@@ -62,6 +62,7 @@ def auto_migrate_db(app):
                 ("profile_image", "TEXT"),
                 ("streak", "INTEGER DEFAULT 0"),
                 ("last_active", "TIMESTAMP"),
+                ("email_verified", "BOOLEAN DEFAULT 0"),
             ],
             "user_lesson_progress": [
                 ("course_id", "INTEGER"),
@@ -118,6 +119,8 @@ def register_blueprints(app):
     from app.models.premium_models import Lesson, UserLessonProgress, Note, Certificate, Notification
     from app.models.chat import ChatMessage
     from app.models.roadmap import UserRoadmap, RoadmapProgress
+    from app.models.user import User
+    from app.models.otp_verification import OtpVerification
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(users_bp, url_prefix="/api/users")

@@ -28,11 +28,11 @@ const Login = () => {
             const data = await login(email, password);
             console.log("Login: Response received", data);
             
-            if (data?.two_factor_required || data?.['2fa_required']) {
-                console.log("Login: 2FA required for this account");
+            if (data?.two_factor_required || data?.['2fa_required'] || data?.status === 'OTP_REQUIRED') {
+                console.log("Login: OTP required for this account");
                 setShow2FA(true);
                 setTempData(data);
-                toast.success("Verification code required (Mock: 123456)");
+                toast.success("Verification code sent to your email!");
                 setLoading(false);
                 return;
             }
@@ -68,10 +68,12 @@ const Login = () => {
         setLoading(true);
         console.log("Login: Verifying 2FA for", email);
         try {
-            const response = await api.post('/auth/verify-2fa', {
-                email: email,
-                otp: otp
-            });
+            const endpoint = tempData?.status === 'OTP_REQUIRED' ? '/auth/verify-otp' : '/auth/verify-2fa';
+            const payload = tempData?.status === 'OTP_REQUIRED' 
+                ? { user_id: tempData.user_id, otp: otp }
+                : { email: email, otp: otp };
+
+            const response = await api.post(endpoint, payload);
             console.log("Login: 2FA Verified", response.data);
             
             const data = response.data;
@@ -158,7 +160,9 @@ const Login = () => {
                                 className="w-full bg-blue-50 border-none rounded-2xl p-5 text-2xl font-black tracking-[1em] text-center focus:ring-2 focus:ring-blue-100 transition-all outline-none text-blue-600"
                                 placeholder="000000"
                             />
-                            <p className="text-[10px] text-gray-400 font-bold text-center mt-4 uppercase tracking-widest">Mock Code: 123456</p>
+                            <p className="text-[10px] text-gray-400 font-bold text-center mt-4 uppercase tracking-widest">
+                                {tempData?.status === 'OTP_REQUIRED' ? "Check your email inbox" : "Mock Code: 123456"}
+                            </p>
                         </div>
                     )}
 

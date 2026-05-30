@@ -17,9 +17,11 @@ class User(db.Model):
     streak = db.Column(db.Integer, default=0)
     last_active = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    email_verified = db.Column(db.Boolean, default=False, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     results = db.relationship("Result", backref="user", lazy=True)
+    otp_entries = db.relationship('OtpVerification', back_populates='user', cascade='all, delete-orphan')
 
     def to_dict(self):
         return {
