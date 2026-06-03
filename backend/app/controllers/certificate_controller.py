@@ -32,17 +32,14 @@ class CertificateController:
         ).count()
 
         if completed_lessons < total_lessons:
-            return jsonify({"error": "You must watch all video lessons first."}), 400
+            return jsonify({"error": "Course not fully completed"}), 400
 
-        # Get best quiz score - Must have taken at least one quiz
+        # Get best quiz score – must have at least one quiz attempt
         best_result = Result.query.filter_by(user_id=user_id, course_id=course_id).order_by(Result.score.desc()).first()
         if not best_result:
-            return jsonify({"error": "You must pass a quiz before getting your certificate."}), 400
-        
-        # Optional: enforce passing score
+            return jsonify({"error": "No quiz attempts recorded for this course"}), 400
         if best_result.score < 50:
-            return jsonify({"error": f"Your highest score is {best_result.score}%. You need at least 50% to pass."}), 400
-
+            return jsonify({"error": f"Insufficient quiz score ({best_result.score}%). Minimum required is 50%"}), 400
         score = best_result.score
 
         # Issue new certificate
