@@ -3,6 +3,7 @@ from logging.handlers import RotatingFileHandler
 import os
 from flask import Flask, jsonify
 from app.extensions import db, jwt, bcrypt, cors
+from app.database.mongo import init_mongo
 from app.config import config
 
 
@@ -15,6 +16,7 @@ def create_app(config_name="default"):
     jwt.init_app(app)
     bcrypt.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    init_mongo(app)
 
     # Setup Logging
     setup_logging(app)
@@ -35,7 +37,19 @@ def create_app(config_name="default"):
 
     # Create tables + auto-migrate missing columns
     with app.app_context():
+        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        if "@" in db_uri:
+            try:
+                prefix, rest = db_uri.split("://", 1)
+                auth, host_db = rest.split("@", 1)
+                sanitized_uri = f"{prefix}://***:***@{host_db}"
+            except Exception:
+                sanitized_uri = "postgresql://***:***@..."
+        else:
+            sanitized_uri = db_uri
+        app.logger.info(f"Active Database URI: {sanitized_uri}")
         db.create_all()
+        app.logger.info("Database connected successfully.")
         auto_migrate_db(app)
 
     # Global Error Handler for Debugging
