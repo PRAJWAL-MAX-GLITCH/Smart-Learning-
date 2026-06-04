@@ -34,7 +34,7 @@ const AdminLogin = () => {
             if (userRole === 'admin') {
                 toast.success('Welcome back, Admin!');
                 console.log("NAVIGATING TO: /admin/dashboard");
-                window.location.href = '/admin/dashboard';
+                navigate('/admin/dashboard');
             } else {
                 console.warn("ROLE MISMATCH: Expected admin, got", userRole);
                 toast.error('Access Denied. Role mismatch.');

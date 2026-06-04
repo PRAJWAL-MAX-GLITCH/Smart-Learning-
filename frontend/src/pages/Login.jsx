@@ -48,11 +48,11 @@ const Login = () => {
             // Redirect based on role
             if (userRole === 'admin') {
                 console.log("NAVIGATING TO: /admin/dashboard");
-                window.location.href = '/admin/dashboard';
+                navigate('/admin/dashboard');
             } else {
                 const from = location.state?.from?.pathname || '/dashboard';
                 console.log("NAVIGATING TO:", from);
-                window.location.href = from;
+                navigate(from);
             }
         } catch (err) {
             console.error("Login: Error", err);
@@ -87,9 +87,9 @@ const Login = () => {
             
             const userRole = (data.role || "").toLowerCase();
             if (userRole === 'admin') {
-                window.location.href = '/admin/dashboard';
+                navigate('/admin/dashboard');
             } else {
-                window.location.href = '/dashboard';
+                navigate('/dashboard');
             }
         } catch (err) {
             console.error("Login: 2FA Error", err);
