@@ -1,9 +1,7 @@
 import random
 import string
 from datetime import datetime, timedelta
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 
 from app.extensions import db
 from app.models.otp_verification import OtpVerification
@@ -11,12 +9,10 @@ from app.models.user import User
 
 # Environment variables are loaded via Flask config (app.config)
 
-def _load_smtp_config(app):
+def _load_resend_config(app):
     return {
-        "server":   app.config.get("SMTP_SERVER"),
-        "port":     app.config.get("SMTP_PORT"),
-        "email":    app.config.get("SMTP_EMAIL"),
-        "password": app.config.get("SMTP_PASSWORD"),
+        "api_key": app.config.get("RESEND_API_KEY"),
+        "email_from": app.config.get("RESEND_EMAIL_FROM", "onboarding@resend.dev"),
     }
 
 def generate_otp():
@@ -78,52 +74,43 @@ def get_user_email(user_id: int) -> str:
     return user.email if user else ""
 
 def send_email_otp(recipient_email: str, otp_code: str):
-    """Send OTP via SMTP.
-    Relies on Flask app config for SMTP settings. Raises on failure.
+    """Send OTP via Resend API.
+    Relies on Flask app config for Resend API settings. Raises on failure.
     """
     from flask import current_app
     import logging
 
     logger = logging.getLogger(__name__)
-    cfg = _load_smtp_config(current_app)
-    missing = [k for k, v in cfg.items() if not v]
-    if missing:
-        msg = f"SMTP configuration is incomplete. Missing variables: {', '.join(missing).upper()}"
+    cfg = _load_resend_config(current_app)
+    
+    if not cfg["api_key"]:
+        msg = "RESEND_API_KEY is missing in configuration."
         logger.error(msg)
         raise RuntimeError(msg)
 
+    resend.api_key = cfg["api_key"]
+
     subject = "SmartLearning Verification Code"
-    body = f"""\
-Hello,
-
-Your verification code is:
-
-{otp_code}
-
-This code will expire in 5 minutes. If you did not request this login, please ignore this email.
-
-SmartLearning Team
-"""
-    msg = MIMEMultipart()
-    msg["From"] = cfg["email"]
-    msg["To"] = recipient_email
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain"))
+    html_body = f"""
+    <p>Hello,</p>
+    <p>Your verification code is: <strong>{otp_code}</strong></p>
+    <p>This code will expire in 5 minutes. If you did not request this login, please ignore this email.</p>
+    <p>SmartLearning Team</p>
+    """
 
     try:
-        logger.info(f"SMTP connection started to {cfg['server']}:{cfg['port']} with timeout=10s")
-        with smtplib.SMTP(cfg["server"], int(cfg["port"]), timeout=10) as server:
-            logger.info("SMTP connection established. TLS started.")
-            server.starttls()
-            
-            logger.info("Attempting login...")
-            server.login(cfg["email"], cfg["password"])
-            logger.info("Login successful. Sending email...")
-            
-            server.send_message(msg)
-            logger.info(f"Email sent successfully to {recipient_email}")
+        logger.info(f"Sending OTP email via Resend to {recipient_email}")
+        
+        response = resend.Emails.send({
+            "from": cfg["email_from"],
+            "to": recipient_email,
+            "subject": subject,
+            "html": html_body
+        })
+        
+        logger.info(f"Email sent successfully to {recipient_email}. Resend ID: {response.get('id')}")
             
         return True
     except Exception as e:
-        logger.error(f"SMTP exception details: {str(e)}")
-        raise RuntimeError(f"Failed to send OTP email: {str(e)}")
+        logger.error(f"Resend exception details: {str(e)}")
+        raise RuntimeError(f"Failed to send OTP email via Resend: {str(e)}")

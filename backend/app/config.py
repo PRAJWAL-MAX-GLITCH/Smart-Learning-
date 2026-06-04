@@ -26,21 +26,16 @@ class Config:
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-jwt-secret")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=2)
 
-    # SMTP Configuration
-    SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-    SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
-    SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
-    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+    # Resend Configuration
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+    RESEND_EMAIL_FROM = os.environ.get("RESEND_EMAIL_FROM", "onboarding@resend.dev")
     MONGO_URI = os.environ.get("MONGO_URI")
 
     @classmethod
     def get_smtp_status(cls):
-        """Returns SMTP config validation: which vars are set and which are missing."""
+        """Returns Resend config validation: which vars are set and which are missing."""
         required = {
-            "SMTP_SERVER":   cls.SMTP_SERVER,
-            "SMTP_PORT":     str(cls.SMTP_PORT),
-            "SMTP_EMAIL":    cls.SMTP_EMAIL,
-            "SMTP_PASSWORD": cls.SMTP_PASSWORD,
+            "RESEND_API_KEY": cls.RESEND_API_KEY,
         }
         missing = [k for k, v in required.items() if not v]
         return {

@@ -52,16 +52,14 @@ def create_app(config_name="default"):
         app.logger.info("Database connected successfully.")
         auto_migrate_db(app)
 
-        # SMTP startup validation
-        smtp_keys = ["SMTP_SERVER", "SMTP_PORT", "SMTP_EMAIL", "SMTP_PASSWORD"]
-        smtp_missing = [k for k in smtp_keys if not app.config.get(k)]
-        if smtp_missing:
+        # Resend startup validation
+        if not app.config.get("RESEND_API_KEY"):
             app.logger.warning(
-                f"SMTP configuration incomplete. Missing: {', '.join(smtp_missing)}. "
-                "OTP email delivery will fail. Add these as environment variables on Render."
+                "RESEND_API_KEY is missing. "
+                "OTP email delivery will fail. Add this as an environment variable on Render."
             )
         else:
-            app.logger.info("SMTP configuration OK. Email delivery is ready.")
+            app.logger.info("Resend configuration OK. Email delivery is ready.")
 
     # Global Error Handler for Debugging
     @app.errorhandler(Exception)
