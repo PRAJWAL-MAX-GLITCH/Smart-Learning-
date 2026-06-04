@@ -29,13 +29,16 @@ class AuthController:
             if not validate_password(data["password"]):
                 return jsonify({"error": "Password must be at least 8 characters"}), 400
 
+        email = data["email"].strip().lower()
+        username = data["username"].strip()
+        
         user, error = register_user(
-            username=data["username"],
-            email=data["email"],
+            username=username,
+            email=email,
             password=data["password"],
             role="student", # Force student role for public registration
-            first_name=data.get("first_name"),
-            last_name=data.get("last_name"),
+            first_name=data.get("first_name", "").strip() if data.get("first_name") else None,
+            last_name=data.get("last_name", "").strip() if data.get("last_name") else None,
         )
         if error:
             return jsonify({"error": error}), 409
@@ -52,7 +55,8 @@ class AuthController:
         if missing:
             return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
 
-        user, error = authenticate_user(data["email"], data["password"])
+        email = data["email"].strip().lower()
+        user, error = authenticate_user(email, data["password"])
         if error:
             return jsonify({"error": error}), 401
 
