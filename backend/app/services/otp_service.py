@@ -13,9 +13,9 @@ from app.models.user import User
 
 def _load_smtp_config(app):
     return {
-        "server": app.config.get("SMTP_SERVER"),
-        "port": app.config.get("SMTP_PORT"),
-        "email": app.config.get("SMTP_EMAIL"),
+        "server":   app.config.get("SMTP_SERVER"),
+        "port":     app.config.get("SMTP_PORT"),
+        "email":    app.config.get("SMTP_EMAIL"),
         "password": app.config.get("SMTP_PASSWORD"),
     }
 
@@ -84,8 +84,9 @@ def send_email_otp(recipient_email: str, otp_code: str):
     from flask import current_app
 
     cfg = _load_smtp_config(current_app)
-    if not all([cfg["server"], cfg["port"], cfg["email"], cfg["password"]]):
-        raise RuntimeError("SMTP configuration is incomplete")
+    missing = [k for k, v in cfg.items() if not v]
+    if missing:
+        raise RuntimeError(f"SMTP configuration is incomplete. Missing variables: {', '.join(missing).upper()}")
 
     subject = "SmartLearning Verification Code"
     body = f"""\

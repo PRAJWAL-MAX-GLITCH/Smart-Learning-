@@ -52,6 +52,17 @@ def create_app(config_name="default"):
         app.logger.info("Database connected successfully.")
         auto_migrate_db(app)
 
+        # SMTP startup validation
+        smtp_keys = ["SMTP_SERVER", "SMTP_PORT", "SMTP_EMAIL", "SMTP_PASSWORD"]
+        smtp_missing = [k for k in smtp_keys if not app.config.get(k)]
+        if smtp_missing:
+            app.logger.warning(
+                f"SMTP configuration incomplete. Missing: {', '.join(smtp_missing)}. "
+                "OTP email delivery will fail. Add these as environment variables on Render."
+            )
+        else:
+            app.logger.info("SMTP configuration OK. Email delivery is ready.")
+
     # Global Error Handler for Debugging
     @app.errorhandler(Exception)
     def handle_exception(e):
@@ -147,6 +158,9 @@ def register_blueprints(app):
     app.register_blueprint(notification_bp, url_prefix="/api/notifications")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
     app.register_blueprint(ml_bp, url_prefix="/api/ml")
+
+    from app.routes.email_routes import email_status_bp
+    app.register_blueprint(email_status_bp, url_prefix="/api/email")
     from app.routes.lesson_routes import lesson_bp
     app.register_blueprint(lesson_bp, url_prefix="/api/admin/lessons")
 
