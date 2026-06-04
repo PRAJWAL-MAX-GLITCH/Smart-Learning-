@@ -82,11 +82,15 @@ def send_email_otp(recipient_email: str, otp_code: str):
     Relies on Flask app config for SMTP settings. Raises on failure.
     """
     from flask import current_app
+    import logging
 
+    logger = logging.getLogger(__name__)
     cfg = _load_smtp_config(current_app)
     missing = [k for k, v in cfg.items() if not v]
     if missing:
-        raise RuntimeError(f"SMTP configuration is incomplete. Missing variables: {', '.join(missing).upper()}")
+        msg = f"SMTP configuration is incomplete. Missing variables: {', '.join(missing).upper()}"
+        logger.error(msg)
+        raise RuntimeError(msg)
 
     subject = "SmartLearning Verification Code"
     body = f"""\
@@ -106,9 +110,20 @@ SmartLearning Team
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
 
-    with smtplib.SMTP(cfg["server"], int(cfg["port"])) as server:
-        server.starttls()
-        server.login(cfg["email"], cfg["password"])
-        server.send_message(msg)
-
-    return True
+    try:
+        logger.info(f"SMTP connection started to {cfg['server']}:{cfg['port']} with timeout=10s")
+        with smtplib.SMTP(cfg["server"], int(cfg["port"]), timeout=10) as server:
+            logger.info("SMTP connection established. TLS started.")
+            server.starttls()
+            
+            logger.info("Attempting login...")
+            server.login(cfg["email"], cfg["password"])
+            logger.info("Login successful. Sending email...")
+            
+            server.send_message(msg)
+            logger.info(f"Email sent successfully to {recipient_email}")
+            
+        return True
+    except Exception as e:
+        logger.error(f"SMTP exception details: {str(e)}")
+        raise RuntimeError(f"Failed to send OTP email: {str(e)}")

@@ -72,7 +72,10 @@ class AuthController:
                 # Log but still proceed
                 from app.extensions import db
                 db.session.rollback()
-                return jsonify({"error": f"Failed to send OTP email: {str(e)}"}), 500
+                return jsonify({
+                    "success": False, 
+                    "message": "Failed to send OTP email"
+                }), 500
 
             return jsonify({"status": "OTP_REQUIRED", "user_id": user.id}), 200
 
@@ -143,7 +146,10 @@ class AuthController:
         try:
             send_email_otp(email, otp_code)
         except Exception as e:
-            return jsonify({"error": f"Failed to send OTP email: {str(e)}"}), 500
+            return jsonify({
+                "success": False,
+                "message": "Failed to send OTP email"
+            }), 500
         return jsonify({"status": "OTP_SENT"}), 200
 
 
